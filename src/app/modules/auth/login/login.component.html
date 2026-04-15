@@ -57,7 +57,7 @@
               autocomplete="current-password"
               [disabled]="loading()"
             />
-            <button type="button" class="show-pwd" (click)="showPassword.update(v => !v)">
+            <button type="button" class="show-pwd" (click)="toggleShowPassword()">
               <span class="material-icons">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
             </button>
           </div>

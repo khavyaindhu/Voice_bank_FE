@@ -45,6 +45,10 @@ export class LayoutComponent {
     this.sidebarOpen.update(v => !v);
   }
 
+  togglePayments(): void {
+    this.paymentsExpanded.update(v => !v);
+  }
+
   logout(): void {
     this.auth.logout();
   }

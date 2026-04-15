@@ -20,6 +20,10 @@ export class LoginComponent {
 
   constructor(private auth: AuthService, private router: Router) {}
 
+  toggleShowPassword(): void {
+    this.showPassword.update(v => !v);
+  }
+
   onSubmit(): void {
     if (!this.username || !this.password) {
       this.error.set('Please enter your username and password.');

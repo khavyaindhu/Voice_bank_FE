@@ -41,7 +41,7 @@
         } @else {
           <div class="nav-item nav-parent"
                [class.active]="paymentsExpanded()"
-               (click)="paymentsExpanded.update(v => !v)">
+               (click)="togglePayments()">
             <span class="material-icons">{{ item.icon }}</span>
             <span class="nav-label">{{ item.label }}</span>
             <span class="material-icons expand-icon">

@@ -132,6 +132,7 @@ export interface Loan {
   endDate: string;
   status: string;
   loanNumber: string;
+  lenderName?: string;
 }
 
 export interface AchPayload { fromAccount: string; toAccount: string; recipientName: string; routingNumber: string; amount: number; memo?: string; scheduledDate?: string; }
