@@ -1,0 +1,155 @@
+// U.S. Bank Brand Colors
+:root {
+  --usb-red: #CC0000;
+  --usb-red-dark: #A30000;
+  --usb-red-light: #E8000010;
+  --usb-navy: #002E6D;
+  --usb-navy-light: #1A4A8A;
+  --usb-white: #FFFFFF;
+  --usb-gray-50: #F8F9FA;
+  --usb-gray-100: #F0F2F5;
+  --usb-gray-200: #E4E7EC;
+  --usb-gray-400: #9CA3AF;
+  --usb-gray-600: #4B5563;
+  --usb-gray-800: #1F2937;
+  --usb-green: #16A34A;
+  --usb-green-light: #DCFCE7;
+  --usb-amber: #D97706;
+  --usb-amber-light: #FEF3C7;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.10);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.12);
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  color: var(--usb-gray-800);
+  background: var(--usb-gray-100);
+}
+
+// Typography
+h1 { font-size: 24px; font-weight: 700; }
+h2 { font-size: 20px; font-weight: 600; }
+h3 { font-size: 16px; font-weight: 600; }
+
+// Angular Material overrides
+.mat-mdc-button.mat-primary {
+  --mdc-filled-button-container-color: var(--usb-red);
+}
+
+.mat-mdc-raised-button.mat-primary {
+  background-color: var(--usb-red) !important;
+  color: white !important;
+}
+
+.mat-mdc-form-field.mat-focused .mat-mdc-floating-label {
+  color: var(--usb-red) !important;
+}
+
+.mat-mdc-form-field.mat-focused .mdc-line-ripple::after {
+  border-bottom-color: var(--usb-red) !important;
+}
+
+// Utility classes
+.card {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--usb-gray-200);
+}
+
+.btn-primary {
+  background: var(--usb-red);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover { background: var(--usb-red-dark); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--usb-red);
+  border: 1.5px solid var(--usb-red);
+  border-radius: var(--radius);
+  padding: 9px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  &:hover { background: var(--usb-red); color: white; }
+}
+
+.badge-success {
+  background: var(--usb-green-light);
+  color: var(--usb-green);
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-pending {
+  background: var(--usb-amber-light);
+  color: var(--usb-amber);
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.page-header {
+  margin-bottom: 24px;
+  h2 { color: var(--usb-navy); }
+  p { color: var(--usb-gray-600); margin-top: 4px; font-size: 13px; }
+}
+
+.form-section {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--usb-gray-200);
+  margin-bottom: 16px;
+}
+
+.alert-info {
+  background: #EFF6FF;
+  border-left: 3px solid #3B82F6;
+  padding: 12px 16px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 13px;
+  color: #1E40AF;
+  margin-bottom: 16px;
+}
+
+.alert-warning {
+  background: var(--usb-amber-light);
+  border-left: 3px solid var(--usb-amber);
+  padding: 12px 16px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 13px;
+  color: #92400E;
+  margin-bottom: 16px;
+}
+
+// Scrollbar
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--usb-gray-200); border-radius: 3px; }

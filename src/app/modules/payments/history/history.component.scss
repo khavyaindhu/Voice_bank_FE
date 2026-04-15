@@ -1,0 +1,119 @@
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+
+  label { font-size: 13px; font-weight: 600; color: var(--usb-gray-800); }
+
+  select {
+    padding: 8px 14px;
+    border: 1.5px solid var(--usb-gray-200);
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    background: white;
+    cursor: pointer;
+    &:focus { border-color: var(--usb-red); }
+  }
+
+  .total-count {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--usb-gray-600);
+    font-weight: 500;
+  }
+}
+
+.tx-table-wrap { overflow-x: auto; }
+
+.tx-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--usb-gray-600);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--usb-gray-200);
+    white-space: nowrap;
+    background: var(--usb-gray-50);
+  }
+
+  td {
+    padding: 14px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--usb-gray-100);
+    vertical-align: middle;
+
+    small { font-size: 11px; color: var(--usb-gray-400); display: block; margin-top: 2px; }
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--usb-gray-50); }
+}
+
+.type-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+
+  .type-icon {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    .material-icons { font-size: 16px; }
+  }
+}
+
+.ref { font-family: monospace; font-size: 11px; color: var(--usb-gray-600); }
+.amount { font-weight: 700; color: var(--usb-red); white-space: nowrap; }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  border-top: 1px solid var(--usb-gray-100);
+  font-size: 13px;
+  color: var(--usb-gray-600);
+
+  button {
+    background: white;
+    border: 1.5px solid var(--usb-gray-200);
+    border-radius: var(--radius);
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all .15s;
+    .material-icons { font-size: 20px; color: var(--usb-gray-800); }
+    &:hover:not(:disabled) { border-color: var(--usb-red); .material-icons { color: var(--usb-red); } }
+    &:disabled { opacity: .4; cursor: not-allowed; }
+  }
+}
+
+.loading-rows { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.skeleton-row {
+  height: 44px;
+  background: linear-gradient(90deg, var(--usb-gray-100) 25%, var(--usb-gray-200) 50%, var(--usb-gray-100) 75%);
+  background-size: 200% 100%;
+  border-radius: var(--radius);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+.empty-state {
+  padding: 48px; text-align: center; color: var(--usb-gray-400);
+  .material-icons { font-size: 40px; display: block; margin-bottom: 8px; }
+}

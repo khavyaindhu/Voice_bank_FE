@@ -1,0 +1,18 @@
+.card-summary {
+  background: var(--usb-gray-50);
+  border: 1px solid var(--usb-gray-200);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--usb-gray-600);
+  strong { color: var(--usb-gray-800); }
+}

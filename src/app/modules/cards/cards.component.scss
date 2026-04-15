@@ -1,0 +1,146 @@
+.cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.card-container {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 24px;
+  align-items: start;
+
+  @media (max-width: 760px) { grid-template-columns: 1fr; }
+}
+
+// Visual Card
+.visual-card {
+  background: linear-gradient(135deg, var(--usb-navy) 0%, var(--usb-navy-light) 100%);
+  border-radius: 16px;
+  padding: 24px;
+  color: white;
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+  transition: filter .3s;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.06);
+  }
+
+  &.frozen { filter: grayscale(.8) brightness(.85); }
+  &.debit { background: linear-gradient(135deg, #374151 0%, #1F2937 100%); }
+}
+
+.vc-top { display: flex; justify-content: space-between; align-items: center; }
+.bank-name { font-size: 16px; font-weight: 800; letter-spacing: -0.5px; }
+.network { font-size: 13px; font-weight: 600; opacity: .8; background: rgba(255,255,255,.15); padding: 3px 10px; border-radius: 12px; }
+.vc-number { font-size: 20px; font-weight: 600; letter-spacing: 3px; font-family: monospace; margin: 20px 0 16px; }
+.vc-bottom { display: flex; align-items: flex-end; gap: 24px; }
+.vc-label { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; opacity: .6; margin-bottom: 3px; }
+.vc-value { font-size: 13px; font-weight: 600; }
+.card-type-badge {
+  margin-left: auto;
+  background: rgba(255,255,255,.2);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.frozen-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  .material-icons { font-size: 36px; }
+}
+
+// Card info panel
+.card-info { padding: 24px; }
+
+.info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  .card-title { font-size: 16px; font-weight: 700; color: var(--usb-navy); margin-bottom: 6px; }
+}
+
+.freeze-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: white;
+  border: 1.5px solid var(--usb-gray-200);
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--usb-gray-800);
+  white-space: nowrap;
+  transition: all .15s;
+  .material-icons { font-size: 16px; }
+  &:hover:not(:disabled) { border-color: var(--usb-red); color: var(--usb-red); }
+  &:disabled { opacity: .5; }
+}
+
+.credit-details { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+
+.credit-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--usb-gray-600);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--usb-gray-100);
+  &:last-child { border-bottom: none; }
+  strong { color: var(--usb-gray-800); }
+  .red { color: var(--usb-red); }
+  .green { color: var(--usb-green); }
+}
+
+.utilization { margin-top: 4px; }
+.util-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; .red { color: var(--usb-red); font-weight: 700; } .green { color: var(--usb-green); font-weight: 700; } }
+.util-bar { height: 6px; background: var(--usb-gray-200); border-radius: 3px; overflow: hidden; }
+.util-fill { height: 100%; background: var(--usb-green); border-radius: 3px; transition: width .4s; &.high { background: var(--usb-red); } }
+
+.rewards {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #FEF9C3;
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: #713F12;
+  .material-icons { color: #D97706; font-size: 18px; }
+}
+
+.skeleton-card {
+  height: 220px;
+  background: linear-gradient(90deg, var(--usb-gray-100) 25%, var(--usb-gray-200) 50%, var(--usb-gray-100) 75%);
+  background-size: 200% 100%;
+  border-radius: var(--radius-lg);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }

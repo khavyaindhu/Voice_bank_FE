@@ -1,0 +1,65 @@
+<div class="page-header">
+  <h2>Send with Zelle<sup>®</sup></h2>
+  <p>Send money instantly to anyone with a U.S. bank account — no fees, arrives in minutes.</p>
+</div>
+
+<div class="alert-warning">
+  <span class="material-icons">warning</span>
+  Zelle payments are <strong>instant and final</strong>. Only send money to people you know and trust.
+</div>
+
+@if (success()) { <div class="alert-success"><span class="material-icons">check_circle</span> {{ success() }}</div> }
+@if (error()) { <div class="alert-error"><span class="material-icons">error_outline</span> {{ error() }}</div> }
+
+<div class="form-section">
+  <form (ngSubmit)="submit()" (change)="onFormChange()">
+    <div class="form-grid">
+      <div class="field-group full-width">
+        <label>From Account *</label>
+        <select [(ngModel)]="form.fromAccount" name="fromAccount" required>
+          <option value="">Select account</option>
+          @for (acc of accounts(); track acc._id) {
+            <option [value]="acc.maskedNumber">{{ acc.nickname }} ({{ acc.maskedNumber }}) — {{ acc.availableBalance | currency }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field-group full-width">
+        <label>Recipient Email or Mobile Number *</label>
+        <input type="text" [(ngModel)]="form.recipientContact" name="recipientContact"
+          placeholder="email@example.com or (555) 555-5555" required />
+      </div>
+
+      <div class="field-group">
+        <label>Amount (USD) *</label>
+        <div class="input-prefix">
+          <span>$</span>
+          <input type="number" [(ngModel)]="form.amount" name="amount" placeholder="0.00" min="1" max="2500" step="0.01" required />
+        </div>
+        <span style="font-size:12px;color:var(--usb-gray-400)">Daily limit: $2,500</span>
+      </div>
+
+      <div class="field-group">
+        <label>Note (Optional)</label>
+        <input type="text" [(ngModel)]="form.memo" name="memo" placeholder="e.g. Dinner, Rent, Concert tickets" />
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary" [disabled]="loading()">
+        @if (loading()) { <span class="spinner"></span> Sending... }
+        @else { <span class="material-icons">bolt</span> Send with Zelle }
+      </button>
+    </div>
+  </form>
+</div>
+
+<div class="zelle-info card" style="padding:20px;margin-top:16px">
+  <h3 style="margin-bottom:12px;color:var(--usb-navy)">About Zelle</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;color:var(--usb-gray-600)">
+    <div><strong>Speed:</strong> Typically instant (within minutes)</div>
+    <div><strong>Fee:</strong> Free from U.S. Bank</div>
+    <div><strong>Daily Limit:</strong> $2,500</div>
+    <div><strong>Monthly Limit:</strong> $20,000</div>
+  </div>
+</div>

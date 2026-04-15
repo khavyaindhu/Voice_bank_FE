@@ -1,0 +1,79 @@
+<div class="page-header">
+  <h2>Credit Card Payment</h2>
+  <p>Pay your U.S. Bank credit card balance — payments post within 1–2 business days.</p>
+</div>
+
+@if (success()) { <div class="alert-success"><span class="material-icons">check_circle</span> {{ success() }}</div> }
+@if (error()) { <div class="alert-error"><span class="material-icons">error_outline</span> {{ error() }}</div> }
+
+<div class="form-section">
+  <form (ngSubmit)="submit()">
+    <div class="form-grid">
+      <div class="field-group">
+        <label>Pay From Account *</label>
+        <select [(ngModel)]="form.fromAccount" name="fromAccount" required>
+          <option value="">Select account</option>
+          @for (acc of accounts(); track acc._id) {
+            <option [value]="acc.maskedNumber">{{ acc.nickname }} ({{ acc.maskedNumber }}) — {{ acc.availableBalance | currency }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Select Credit Card *</label>
+        <select [(ngModel)]="form.cardId" name="cardId" (ngModelChange)="onCardChange()" required>
+          <option value="">Select card</option>
+          @for (card of cards(); track card._id) {
+            <option [value]="card._id">{{ card.network }} {{ card.maskedNumber }} — Balance: {{ card.currentBalance | currency }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    @if (selectedCard()) {
+      <div class="card-summary">
+        <div class="summary-row">
+          <span>Current Balance</span><strong>{{ selectedCard()!.currentBalance | currency }}</strong>
+        </div>
+        <div class="summary-row">
+          <span>Minimum Payment Due</span><strong>{{ selectedCard()!.minimumPayment | currency }}</strong>
+        </div>
+        <div class="summary-row">
+          <span>Payment Due Date</span><strong>{{ selectedCard()!.dueDate | date:'MMM d, yyyy' }}</strong>
+        </div>
+      </div>
+
+      <div class="field-group" style="margin-top:20px">
+        <label>Payment Amount *</label>
+        <div class="toggle-group">
+          <button type="button" [class.active]="paymentType()==='minimum'" (click)="paymentType.set('minimum')">
+            Minimum ({{ selectedCard()!.minimumPayment | currency }})
+          </button>
+          <button type="button" [class.active]="paymentType()==='full'" (click)="paymentType.set('full')">
+            Full Balance ({{ selectedCard()!.currentBalance | currency }})
+          </button>
+          <button type="button" [class.active]="paymentType()==='custom'" (click)="paymentType.set('custom')">
+            Custom Amount
+          </button>
+        </div>
+      </div>
+
+      @if (paymentType() === 'custom') {
+        <div class="field-group" style="margin-top:16px;max-width:240px">
+          <label>Enter Amount *</label>
+          <div class="input-prefix">
+            <span>$</span>
+            <input type="number" [(ngModel)]="form.customAmount" name="customAmount" placeholder="0.00" min="1" step="0.01" required />
+          </div>
+        </div>
+      }
+    }
+
+    <div class="form-actions" style="margin-top:24px">
+      <button type="submit" class="btn-primary" [disabled]="loading() || !selectedCard() || !form.fromAccount">
+        @if (loading()) { <span class="spinner"></span> Processing... }
+        @else { <span class="material-icons">credit_card</span> Make Payment of {{ paymentAmount() | currency }} }
+      </button>
+    </div>
+  </form>
+</div>

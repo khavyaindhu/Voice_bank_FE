@@ -1,0 +1,79 @@
+<div class="page-header">
+  <h2>My Accounts</h2>
+  <p>Manage and view details for all your U.S. Bank accounts.</p>
+</div>
+
+@if (loading()) {
+  <div class="loading-grid">
+    @for (i of [1,2,3]; track i) { <div class="skeleton-card"></div> }
+  </div>
+} @else {
+  <div class="accounts-grid">
+    @for (acc of accounts(); track acc._id) {
+      <div class="account-detail-card card">
+        <div class="card-header">
+          <div class="type-icon-wrap">
+            <span class="material-icons">{{ typeIcon(acc.type) }}</span>
+          </div>
+          <div>
+            <div class="acc-nickname">{{ acc.nickname }}</div>
+            <div class="acc-number">Account {{ acc.maskedNumber }}</div>
+          </div>
+          <span class="acc-type-badge">{{ typeLabel(acc.type) }}</span>
+        </div>
+
+        <div class="balance-row">
+          <div class="bal-item">
+            <span class="bal-label">Current Balance</span>
+            <span class="bal-amount">{{ acc.balance | currency }}</span>
+          </div>
+          <div class="bal-divider"></div>
+          <div class="bal-item">
+            <span class="bal-label">Available Balance</span>
+            <span class="bal-amount available">{{ acc.availableBalance | currency }}</span>
+          </div>
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-label">Currency</span>
+            <span class="detail-value">{{ acc.currency }}</span>
+          </div>
+
+          @if (acc.interestRate) {
+            <div class="detail-item">
+              <span class="detail-label">Interest Rate</span>
+              <span class="detail-value highlight">{{ acc.interestRate }}% p.a.</span>
+            </div>
+          }
+
+          @if (acc.type === 'rd') {
+            <div class="detail-item">
+              <span class="detail-label">Monthly Deposit</span>
+              <span class="detail-value">{{ acc.rdMonthlyDeposit | currency }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Tenure</span>
+              <span class="detail-value">{{ acc.rdTenureMonths }} months</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Maturity Date</span>
+              <span class="detail-value">{{ acc.maturityDate | date:'MMM d, yyyy' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Status</span>
+              <span class="badge-success">Active</span>
+            </div>
+          }
+        </div>
+
+        @if (acc.type === 'rd') {
+          <div class="rd-info-box">
+            <span class="material-icons">info</span>
+            <span>Premature withdrawal is allowed with a <strong>1% penalty</strong> on earned interest. On maturity, funds are credited to your linked savings account.</span>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}

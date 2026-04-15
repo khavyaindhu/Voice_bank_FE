@@ -1,0 +1,125 @@
+<!-- Floating toggle button -->
+<button class="chat-fab" (click)="toggleChat()" [class.open]="isOpen()" [attr.aria-label]="isOpen() ? 'Close assistant' : 'Open assistant'">
+  <span class="material-icons">{{ isOpen() ? 'close' : 'smart_toy' }}</span>
+  @if (!isOpen()) { <span class="fab-label">Ask Maya</span> }
+  @if (!isOpen() && messages().length === 0) { <span class="fab-pulse"></span> }
+</button>
+
+@if (isOpen()) {
+  <div class="chatbot-panel" [class.minimized]="isMinimized()">
+
+    <!-- Header -->
+    <div class="chat-header">
+      <div class="header-left">
+        <div class="avatar">
+          <span class="material-icons">smart_toy</span>
+          <span class="online-dot"></span>
+        </div>
+        <div>
+          <div class="assistant-name">Maya</div>
+          <div class="assistant-subtitle">U.S. Bank AI Assistant</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="screen-chip">
+          <span class="material-icons">location_on</span>
+          {{ screenLabel() }}
+        </div>
+        <button (click)="clearChat()" title="Clear chat"><span class="material-icons">refresh</span></button>
+        <button (click)="isMinimized.update(v => !v)" [title]="isMinimized() ? 'Expand' : 'Minimize'">
+          <span class="material-icons">{{ isMinimized() ? 'expand_less' : 'remove' }}</span>
+        </button>
+      </div>
+    </div>
+
+    @if (!isMinimized()) {
+      <!-- Messages -->
+      <div class="messages" #messagesContainer>
+        @for (msg of messages(); track msg.timestamp) {
+          <div class="message-row" [class.user]="msg.role === 'user'">
+            @if (msg.role === 'assistant') {
+              <div class="msg-avatar"><span class="material-icons">smart_toy</span></div>
+            }
+
+            <div class="bubble" [class.user-bubble]="msg.role === 'user'" [class.bot-bubble]="msg.role === 'assistant'">
+              @if (msg.role === 'assistant') {
+                <div class="md-content" [innerHTML]="msg.htmlContent"></div>
+                <div class="bubble-footer">
+                  <span class="ts">{{ msg.timestamp | date:'h:mm a' }}</span>
+                  <button class="speak-btn" (click)="speakMessage(msg.content)" [title]="isSpeaking() ? 'Stop' : 'Read aloud'">
+                    <span class="material-icons">{{ isSpeaking() ? 'stop_circle' : 'volume_up' }}</span>
+                  </button>
+                </div>
+              } @else {
+                <div class="user-text">{{ msg.content }}</div>
+                <div class="bubble-footer right">
+                  <span class="ts">{{ msg.timestamp | date:'h:mm a' }}</span>
+                  @if (msg.screenContext) {
+                    <span class="screen-tag">{{ msg.screenContext }}</span>
+                  }
+                </div>
+              }
+            </div>
+
+            @if (msg.role === 'user') {
+              <div class="msg-avatar user-av">
+                <span class="material-icons">person</span>
+              </div>
+            }
+          </div>
+        }
+
+        @if (isLoading()) {
+          <div class="message-row">
+            <div class="msg-avatar"><span class="material-icons">smart_toy</span></div>
+            <div class="bubble bot-bubble typing-bubble">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Quick Actions -->
+      @if (messages().length <= 1) {
+        <div class="quick-actions-wrap">
+          <div class="qa-label">Quick questions</div>
+          <div class="qa-chips">
+            @for (action of quickActions; track action.label) {
+              <button class="qa-chip" (click)="sendMessage(action.prompt)">{{ action.label }}</button>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <div class="input-wrap" [class.listening]="isListening()">
+          <input
+            #inputField
+            type="text"
+            [value]="inputText()"
+            (input)="inputText.set($any($event.target).value)"
+            (keydown)="onKeydown($event)"
+            [placeholder]="isListening() ? '🎤 Listening...' : 'Ask about transfers, loans, balances...'"
+            [disabled]="isLoading()"
+          />
+
+          @if (speechSupported) {
+            <button class="icon-btn mic-btn" (click)="toggleVoiceInput()"
+              [class.active]="isListening()"
+              [title]="isListening() ? 'Stop listening' : 'Voice input'">
+              <span class="material-icons">{{ isListening() ? 'mic' : 'mic_none' }}</span>
+            </button>
+          }
+
+          <button class="icon-btn send-btn" (click)="sendMessage()"
+            [disabled]="!inputText().trim() || isLoading()"
+            title="Send">
+            <span class="material-icons">send</span>
+          </button>
+        </div>
+        <div class="input-hint">Powered by Claude AI · Context: {{ screenLabel() }}</div>
+      </div>
+    }
+  </div>
+}

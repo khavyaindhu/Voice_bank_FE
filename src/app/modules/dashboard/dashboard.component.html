@@ -1,0 +1,115 @@
+<div class="page-header">
+  <h2>Account Overview</h2>
+  <p>Welcome back. Here's a summary of your accounts.</p>
+</div>
+
+<!-- Account Cards -->
+<div class="account-grid">
+  @if (checking) {
+    <div class="account-card checking">
+      <div class="card-top">
+        <div>
+          <div class="acc-label">Checking Account</div>
+          <div class="acc-number">{{ checking.maskedNumber }}</div>
+        </div>
+        <span class="material-icons acc-icon">account_balance</span>
+      </div>
+      <div class="balance">{{ checking.availableBalance | currency }}</div>
+      <div class="balance-label">Available Balance</div>
+      <div class="card-footer">
+        <span>Total: {{ checking.balance | currency }}</span>
+        <a routerLink="/payments/ach" class="quick-link">Transfer <span class="material-icons">arrow_forward</span></a>
+      </div>
+    </div>
+  }
+
+  @if (savings) {
+    <div class="account-card savings">
+      <div class="card-top">
+        <div>
+          <div class="acc-label">Savings Account</div>
+          <div class="acc-number">{{ savings.maskedNumber }}</div>
+        </div>
+        <span class="material-icons acc-icon">savings</span>
+      </div>
+      <div class="balance">{{ savings.balance | currency }}</div>
+      <div class="balance-label">Current Balance</div>
+      <div class="card-footer">
+        <span>APY {{ savings.interestRate }}%</span>
+        <a routerLink="/accounts" class="quick-link">Details <span class="material-icons">arrow_forward</span></a>
+      </div>
+    </div>
+  }
+
+  @if (rd) {
+    <div class="account-card rd">
+      <div class="card-top">
+        <div>
+          <div class="acc-label">Recurring Deposit</div>
+          <div class="acc-number">{{ rd.maskedNumber }}</div>
+        </div>
+        <span class="material-icons acc-icon">autorenew</span>
+      </div>
+      <div class="balance">{{ rd.balance | currency }}</div>
+      <div class="balance-label">Accumulated Balance</div>
+      <div class="card-footer">
+        <span>{{ rd.rdMonthlyDeposit | currency }}/mo · {{ rd.interestRate }}% p.a.</span>
+        <a routerLink="/accounts" class="quick-link">Details <span class="material-icons">arrow_forward</span></a>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Quick Actions -->
+<div class="section-title">Quick Actions</div>
+<div class="quick-actions">
+  <a routerLink="/payments/ach" class="action-chip">
+    <span class="material-icons">swap_horiz</span> ACH Transfer
+  </a>
+  <a routerLink="/payments/wire" class="action-chip">
+    <span class="material-icons">send</span> Wire Transfer
+  </a>
+  <a routerLink="/payments/zelle" class="action-chip">
+    <span class="material-icons">bolt</span> Send with Zelle
+  </a>
+  <a routerLink="/payments/card" class="action-chip">
+    <span class="material-icons">credit_card</span> Pay Card
+  </a>
+  <a routerLink="/loans/apply" class="action-chip">
+    <span class="material-icons">home</span> Apply for Loan
+  </a>
+</div>
+
+<!-- Recent Transactions -->
+<div class="section-title">Recent Transactions</div>
+<div class="tx-list card">
+  @if (loading()) {
+    <div class="loading-row">
+      <div class="skeleton" *ngFor="let i of [1,2,3]"></div>
+    </div>
+  } @else if (recentTx().length === 0) {
+    <div class="empty-state">
+      <span class="material-icons">receipt_long</span>
+      <p>No transactions yet.</p>
+    </div>
+  } @else {
+    @for (tx of recentTx(); track tx._id) {
+      <div class="tx-row">
+        <div class="tx-icon-wrap">
+          <span class="material-icons">{{ txIcon(tx.type) }}</span>
+        </div>
+        <div class="tx-info">
+          <div class="tx-name">{{ tx.recipientName || tx.type | titlecase }}</div>
+          <div class="tx-meta">{{ tx.type | uppercase }} · {{ tx.createdAt | date:'MMM d, y' }}</div>
+        </div>
+        <div class="tx-right">
+          <div class="tx-amount">-{{ tx.amount | currency }}</div>
+          <span [class]="'badge-' + (tx.status === 'completed' ? 'success' : 'pending')">{{ tx.status }}</span>
+        </div>
+      </div>
+    }
+    <div class="tx-footer">
+      <a routerLink="/payments/history">View all transactions <span class="material-icons">arrow_forward</span></a>
+    </div>
+  }
+</div>

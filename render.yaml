@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: voice-bank-fe
+    runtime: static
+    buildCommand: npm install && npm run build:prod
+    staticPublishPath: dist/voice-bank-fe/browser
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

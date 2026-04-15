@@ -1,0 +1,78 @@
+<div class="page-header">
+  <h2>Wire Transfer</h2>
+  <p>Send funds electronically — domestic wires arrive same business day if sent before 4:00 PM CT.</p>
+</div>
+
+<div class="alert-warning">
+  <span class="material-icons">warning</span>
+  Wire transfers are <strong>irreversible</strong>. Please verify all recipient details before submitting.
+</div>
+
+@if (success()) { <div class="alert-success"><span class="material-icons">check_circle</span> {{ success() }}</div> }
+@if (error()) { <div class="alert-error"><span class="material-icons">error_outline</span> {{ error() }}</div> }
+
+<div class="form-section">
+  <div style="margin-bottom:20px">
+    <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Transfer Type</label>
+    <div class="toggle-group">
+      <button type="button" [class.active]="!isInternational()" (click)="isInternational.set(false)">Domestic</button>
+      <button type="button" [class.active]="isInternational()" (click)="isInternational.set(true)">International</button>
+    </div>
+  </div>
+
+  <form (ngSubmit)="submit()" (change)="onFormChange()">
+    <div class="form-grid">
+      <div class="field-group">
+        <label>From Account *</label>
+        <select [(ngModel)]="form.fromAccount" name="fromAccount" required>
+          <option value="">Select account</option>
+          @for (acc of accounts(); track acc._id) {
+            <option [value]="acc.maskedNumber">{{ acc.nickname }} ({{ acc.maskedNumber }}) — {{ acc.availableBalance | currency }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Recipient Full Name *</label>
+        <input type="text" [(ngModel)]="form.recipientName" name="recipientName" placeholder="Legal name as on bank account" required />
+      </div>
+
+      <div class="field-group">
+        <label>Recipient Bank Name</label>
+        <input type="text" [(ngModel)]="form.recipientBank" name="recipientBank" placeholder="e.g. Chase Bank, Bank of America" />
+      </div>
+
+      @if (!isInternational()) {
+        <div class="field-group">
+          <label>ABA Routing Number *</label>
+          <input type="text" [(ngModel)]="form.routingNumber" name="routingNumber" placeholder="9-digit routing number" maxlength="9" />
+        </div>
+      } @else {
+        <div class="field-group">
+          <label>SWIFT / BIC Code *</label>
+          <input type="text" [(ngModel)]="form.swiftCode" name="swiftCode" placeholder="e.g. CHASUS33" />
+        </div>
+      }
+
+      <div class="field-group">
+        <label>Amount (USD) *</label>
+        <div class="input-prefix">
+          <span>$</span>
+          <input type="number" [(ngModel)]="form.amount" name="amount" placeholder="0.00" min="1" step="0.01" required />
+        </div>
+      </div>
+
+      <div class="field-group full-width">
+        <label>Wire Purpose / Memo *</label>
+        <input type="text" [(ngModel)]="form.memo" name="memo" placeholder="e.g. Invoice payment, Property purchase" />
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary" [disabled]="loading()">
+        @if (loading()) { <span class="spinner"></span> Processing... }
+        @else { <span class="material-icons">send</span> Send Wire Transfer }
+      </button>
+    </div>
+  </form>
+</div>

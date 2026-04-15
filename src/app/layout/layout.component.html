@@ -1,0 +1,73 @@
+<div class="layout" [class.sidebar-collapsed]="!sidebarOpen()">
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="navbar-left">
+      <button class="menu-btn" (click)="toggleSidebar()">
+        <span class="material-icons">menu</span>
+      </button>
+      <div class="brand">
+        <span class="brand-us">U.S.</span>
+        <span class="brand-bank">Bank</span>
+      </div>
+    </div>
+    <div class="navbar-center">
+      <span class="poc-badge">POC Demo</span>
+    </div>
+    <div class="navbar-right">
+      <span class="material-icons notify-icon">notifications_none</span>
+      <div class="user-menu">
+        <span class="material-icons">account_circle</span>
+        <span class="user-name">{{ auth.currentUser()?.fullName }}</span>
+        <button class="logout-btn" (click)="logout()">
+          <span class="material-icons">logout</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <nav>
+      @for (item of navItems; track item.route) {
+        @if (!item.children) {
+          <a class="nav-item"
+             [routerLink]="item.route"
+             routerLinkActive="active"
+             [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }">
+            <span class="material-icons">{{ item.icon }}</span>
+            <span class="nav-label">{{ item.label }}</span>
+          </a>
+        } @else {
+          <div class="nav-item nav-parent"
+               [class.active]="paymentsExpanded()"
+               (click)="paymentsExpanded.update(v => !v)">
+            <span class="material-icons">{{ item.icon }}</span>
+            <span class="nav-label">{{ item.label }}</span>
+            <span class="material-icons expand-icon">
+              {{ paymentsExpanded() ? 'expand_less' : 'expand_more' }}
+            </span>
+          </div>
+          @if (paymentsExpanded()) {
+            <div class="nav-children">
+              @for (child of item.children; track child.route) {
+                <a class="nav-child" [routerLink]="child.route" routerLinkActive="active">
+                  {{ child.label }}
+                </a>
+              }
+            </div>
+          }
+        }
+      }
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <router-outlet />
+  </main>
+
+  <!-- Chatbot -->
+  <app-chatbot />
+
+</div>

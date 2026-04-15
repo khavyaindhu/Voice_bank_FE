@@ -1,0 +1,68 @@
+<div class="page-header">
+  <h2>Apply for a Loan</h2>
+  <p>Choose a loan type and get an instant rate estimate.</p>
+</div>
+
+@if (success()) { <div class="alert-success"><span class="material-icons">check_circle</span> {{ success() }}</div> }
+@if (error()) { <div class="alert-error"><span class="material-icons">error_outline</span> {{ error() }}</div> }
+
+<!-- Step 1: Loan Type -->
+<div class="step-label">Step 1 — Choose Loan Type</div>
+<div class="loan-type-grid">
+  @for (type of loanTypes; track type.key) {
+    <div class="loan-type-card" [class.selected]="selectedType()?.key === type.key" (click)="selectType(type)">
+      <span class="material-icons lt-icon">{{ type.icon }}</span>
+      <div class="lt-title">{{ type.label }}</div>
+      <div class="lt-rate">From {{ type.rate }} APR</div>
+      <div class="lt-desc">{{ type.desc }}</div>
+    </div>
+  }
+</div>
+
+@if (selectedType()) {
+  <!-- Step 2: Loan Details -->
+  <div class="step-label">Step 2 — Loan Details</div>
+  <div class="form-section">
+    <form (ngSubmit)="submit()" (change)="onFormChange()">
+      <div class="form-grid-apply">
+        <div class="field-group">
+          <label>Loan Amount (USD) *</label>
+          <div class="input-prefix">
+            <span>$</span>
+            <input type="number" [(ngModel)]="form.principalAmount" name="principalAmount"
+              placeholder="e.g. 250000"
+              [min]="1000" [max]="selectedType()!.maxAmount" step="1000" required />
+          </div>
+          <small>Max: {{ selectedType()!.maxAmount | currency:'USD':'symbol':'1.0-0' }}</small>
+        </div>
+
+        <div class="field-group">
+          <label>Tenure (months) *</label>
+          <input type="number" [(ngModel)]="form.tenureMonths" name="tenureMonths"
+            placeholder="e.g. 360"
+            [min]="selectedType()!.minTenure" [max]="selectedType()!.maxTenure" required />
+          <small>{{ selectedType()!.minTenure }}–{{ selectedType()!.maxTenure }} months</small>
+        </div>
+      </div>
+
+      @if (estimatedEmi() > 0) {
+        <div class="emi-preview">
+          <span class="material-icons">calculate</span>
+          <div>
+            <div class="emi-label">Estimated Monthly EMI</div>
+            <div class="emi-amount">{{ estimatedEmi() | currency }}</div>
+          </div>
+          <div class="emi-meta">at {{ selectedType()!.rate }} APR · {{ form.tenureMonths }} months</div>
+        </div>
+      }
+
+      <div class="form-actions" style="margin-top:24px">
+        <button type="submit" class="btn-primary" [disabled]="loading() || !form.principalAmount || !form.tenureMonths">
+          @if (loading()) { <span class="spinner"></span> Submitting... }
+          @else { <span class="material-icons">send</span> Submit Application }
+        </button>
+        <a routerLink="/loans" class="btn-outline" style="text-decoration:none">Cancel</a>
+      </div>
+    </form>
+  </div>
+}

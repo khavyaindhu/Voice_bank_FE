@@ -1,0 +1,110 @@
+<div class="page-header">
+  <h2>My Cards</h2>
+  <p>Manage your U.S. Bank credit and debit cards.</p>
+</div>
+
+@if (loading()) {
+  <div class="cards-grid">
+    @for (i of [1,2]; track i) { <div class="skeleton-card"></div> }
+  </div>
+} @else {
+  <div class="cards-grid">
+    @for (card of cards(); track card._id) {
+      <div class="card-container">
+
+        <!-- Visual Card -->
+        <div class="visual-card" [class.frozen]="card.status === 'frozen'" [class.debit]="card.cardType === 'debit'">
+          <div class="vc-top">
+            <div class="bank-name">U.S. Bank</div>
+            <div class="network">{{ card.network }}</div>
+          </div>
+          <div class="vc-number">•••• •••• •••• {{ card.maskedNumber.slice(-4) }}</div>
+          <div class="vc-bottom">
+            <div>
+              <div class="vc-label">Card Holder</div>
+              <div class="vc-value">{{ card.cardholderName }}</div>
+            </div>
+            <div>
+              <div class="vc-label">Expires</div>
+              <div class="vc-value">{{ card.expiryDate }}</div>
+            </div>
+            <div class="card-type-badge">{{ card.cardType | titlecase }}</div>
+          </div>
+          @if (card.status === 'frozen') {
+            <div class="frozen-overlay">
+              <span class="material-icons">ac_unit</span>
+              <span>Card Frozen</span>
+            </div>
+          }
+        </div>
+
+        <!-- Card Details -->
+        <div class="card-info card">
+          <div class="info-header">
+            <div>
+              <div class="card-title">{{ card.network }} {{ card.maskedNumber }}</div>
+              <span [class]="card.status === 'active' ? 'badge-success' : 'badge-pending'">{{ card.status }}</span>
+            </div>
+            <button class="freeze-btn" (click)="toggleFreeze(card)" [disabled]="togglingId() === card._id">
+              <span class="material-icons">{{ card.status === 'frozen' ? 'ac_unit' : 'lock' }}</span>
+              {{ card.status === 'frozen' ? 'Unfreeze' : 'Freeze' }} Card
+            </button>
+          </div>
+
+          @if (card.cardType === 'credit') {
+            <div class="credit-details">
+              <div class="credit-row">
+                <span>Current Balance</span><strong class="red">{{ card.currentBalance | currency }}</strong>
+              </div>
+              <div class="credit-row">
+                <span>Available Credit</span><strong class="green">{{ card.availableCredit | currency }}</strong>
+              </div>
+              <div class="credit-row">
+                <span>Credit Limit</span><strong>{{ card.creditLimit | currency }}</strong>
+              </div>
+              <div class="credit-row">
+                <span>Minimum Payment</span><strong>{{ card.minimumPayment | currency }}</strong>
+              </div>
+              <div class="credit-row">
+                <span>Payment Due Date</span><strong>{{ card.dueDate | date:'MMM d, yyyy' }}</strong>
+              </div>
+
+              <div class="utilization">
+                <div class="util-label">
+                  <span>Credit Utilization</span>
+                  <span [class]="utilizationPct(card) > 30 ? 'red' : 'green'">{{ utilizationPct(card) }}%</span>
+                </div>
+                <div class="util-bar">
+                  <div class="util-fill" [style.width.%]="utilizationPct(card)"
+                    [class.high]="utilizationPct(card) > 30"></div>
+                </div>
+              </div>
+
+              @if (card.rewardPoints) {
+                <div class="rewards">
+                  <span class="material-icons">stars</span>
+                  <strong>{{ card.rewardPoints | number }}</strong> reward points available
+                </div>
+              }
+            </div>
+
+            <a routerLink="/payments/card" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;margin-top:4px;font-size:13px">
+              <span class="material-icons" style="font-size:16px">credit_card</span> Make a Payment
+            </a>
+          }
+
+          @if (card.cardType === 'debit') {
+            <div class="credit-details">
+              <div class="credit-row">
+                <span>Available Balance</span><strong class="green">{{ card.currentBalance | currency }}</strong>
+              </div>
+              <div class="credit-row">
+                <span>Linked Account</span><strong>{{ card.maskedNumber }}</strong>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}

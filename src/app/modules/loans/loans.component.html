@@ -1,0 +1,83 @@
+<div class="page-header">
+  <h2>My Loans</h2>
+  <p>View and manage all your active U.S. Bank loans.</p>
+</div>
+
+<div class="loans-actions">
+  <a routerLink="/loans/apply" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none">
+    <span class="material-icons" style="font-size:18px">add</span> Apply for a New Loan
+  </a>
+</div>
+
+@if (loading()) {
+  <div class="loans-grid">
+    @for (i of [1]; track i) { <div class="skeleton-card"></div> }
+  </div>
+} @else if (loans().length === 0) {
+  <div class="empty-state card">
+    <span class="material-icons">account_balance</span>
+    <h3>No active loans</h3>
+    <p>You don't have any active loans. Apply for a loan to get started.</p>
+    <a routerLink="/loans/apply" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;margin-top:16px">
+      Apply Now
+    </a>
+  </div>
+} @else {
+  <div class="loans-grid">
+    @for (loan of loans(); track loan._id) {
+      <div class="loan-card card">
+        <div class="loan-header">
+          <div class="loan-icon-wrap">
+            <span class="material-icons">{{ loanIcon(loan.loanType) }}</span>
+          </div>
+          <div class="loan-title-block">
+            <h3>{{ loan.loanType | titlecase }} Loan</h3>
+            <span class="loan-number">{{ loan.loanNumber }}</span>
+          </div>
+          <span [class]="loan.status === 'active' ? 'badge-success' : 'badge-pending'">{{ loan.status }}</span>
+        </div>
+
+        <div class="loan-progress">
+          <div class="progress-labels">
+            <span>Paid: {{ loan.principalAmount - loan.outstandingBalance | currency }}</span>
+            <span>{{ paidPct(loan) }}% paid off</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="paidPct(loan)"></div>
+          </div>
+          <div class="progress-labels" style="margin-top:4px">
+            <span style="color:var(--usb-gray-400)">Outstanding: {{ loan.outstandingBalance | currency }}</span>
+            <span style="color:var(--usb-gray-400)">of {{ loan.principalAmount | currency }}</span>
+          </div>
+        </div>
+
+        <div class="loan-details-grid">
+          <div class="loan-detail">
+            <span class="dl">Interest Rate</span>
+            <span class="dv highlight">{{ loan.interestRate }}% APR</span>
+          </div>
+          <div class="loan-detail">
+            <span class="dl">Monthly EMI</span>
+            <span class="dv">{{ loan.emiAmount | currency }}</span>
+          </div>
+          <div class="loan-detail">
+            <span class="dl">Next Due Date</span>
+            <span class="dv">{{ loan.nextDueDate | date:'MMM d, yyyy' }}</span>
+          </div>
+          <div class="loan-detail">
+            <span class="dl">Loan End Date</span>
+            <span class="dv">{{ loan.endDate | date:'MMM d, yyyy' }}</span>
+          </div>
+          <div class="loan-detail">
+            <span class="dl">Tenure</span>
+            <span class="dv">{{ loan.tenureMonths }} months</span>
+          </div>
+          <div class="loan-detail">
+            <span class="dl">Lender</span>
+            <span class="dv">{{ loan.lenderName }}</span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

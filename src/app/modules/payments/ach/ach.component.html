@@ -1,0 +1,76 @@
+<div class="page-header">
+  <h2>ACH Transfer</h2>
+  <p>Send money via Automated Clearing House — typically 1–3 business days.</p>
+</div>
+
+<div class="alert-info">
+  <span class="material-icons">info</span>
+  ACH transfers submitted before <strong>3:00 PM CT</strong> on business days are processed same day.
+</div>
+
+@if (success()) {
+  <div class="alert-success">
+    <span class="material-icons">check_circle</span> {{ success() }}
+  </div>
+}
+@if (error()) {
+  <div class="alert-error">
+    <span class="material-icons">error_outline</span> {{ error() }}
+  </div>
+}
+
+<div class="form-section">
+  <form (ngSubmit)="submit()" (change)="onFormChange()">
+    <div class="form-grid">
+      <div class="field-group">
+        <label>From Account *</label>
+        <select [(ngModel)]="form.fromAccount" name="fromAccount" required>
+          <option value="">Select account</option>
+          @for (acc of accounts(); track acc._id) {
+            <option [value]="acc.maskedNumber">{{ acc.nickname }} ({{ acc.maskedNumber }}) — {{ acc.availableBalance | currency }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Recipient Name *</label>
+        <input type="text" [(ngModel)]="form.recipientName" name="recipientName" placeholder="Full legal name" required />
+      </div>
+
+      <div class="field-group">
+        <label>Recipient Routing Number *</label>
+        <input type="text" [(ngModel)]="form.routingNumber" name="routingNumber" placeholder="9-digit ABA routing number" maxlength="9" required />
+      </div>
+
+      <div class="field-group">
+        <label>Recipient Account Number *</label>
+        <input type="text" [(ngModel)]="form.toAccount" name="toAccount" placeholder="Recipient's account number" required />
+      </div>
+
+      <div class="field-group">
+        <label>Amount (USD) *</label>
+        <div class="input-prefix">
+          <span>$</span>
+          <input type="number" [(ngModel)]="form.amount" name="amount" placeholder="0.00" min="1" step="0.01" required />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Schedule Date</label>
+        <input type="date" [(ngModel)]="form.scheduledDate" name="scheduledDate" />
+      </div>
+
+      <div class="field-group full-width">
+        <label>Memo (Optional)</label>
+        <input type="text" [(ngModel)]="form.memo" name="memo" placeholder="e.g. Rent payment, Invoice #123" />
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary" [disabled]="loading()">
+        @if (loading()) { <span class="spinner"></span> Processing... }
+        @else { <span class="material-icons">send</span> Submit ACH Transfer }
+      </button>
+    </div>
+  </form>
+</div>
