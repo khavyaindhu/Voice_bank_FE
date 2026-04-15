@@ -40,7 +40,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   isSpeaking = signal(false);
   accounts = signal<Account[]>([]);
   private shouldScrollToBottom = false;
-  private recognition: SpeechRecognition | null = null;
+  private recognition: InstanceType<typeof window.SpeechRecognition> | null = null;
   private synth = window.speechSynthesis;
 
   quickActions: QuickAction[] = [
@@ -157,6 +157,10 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
+  toggleMinimize(): void {
+    this.isMinimized.update(v => !v);
+  }
+
   clearChat(): void {
     this.messages.set([]);
     this.sessionId.set(null);
@@ -174,7 +178,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     this.recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = Array.from(event.results)
-        .map(r => r[0].transcript)
+        .map((r: SpeechRecognitionResult) => r[0].transcript)
         .join('');
       this.inputText.set(transcript);
       if (event.results[event.results.length - 1].isFinal) {

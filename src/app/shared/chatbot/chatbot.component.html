@@ -26,7 +26,7 @@
           {{ screenLabel() }}
         </div>
         <button (click)="clearChat()" title="Clear chat"><span class="material-icons">refresh</span></button>
-        <button (click)="isMinimized.update(v => !v)" [title]="isMinimized() ? 'Expand' : 'Minimize'">
+        <button (click)="toggleMinimize()" [title]="isMinimized() ? 'Expand' : 'Minimize'">
           <span class="material-icons">{{ isMinimized() ? 'expand_less' : 'remove' }}</span>
         </button>
       </div>
