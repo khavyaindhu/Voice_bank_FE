@@ -40,7 +40,8 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   isSpeaking = signal(false);
   accounts = signal<Account[]>([]);
   private shouldScrollToBottom = false;
-  private recognition: InstanceType<typeof window.SpeechRecognition> | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private recognition: any = null;
   private synth = window.speechSynthesis;
 
   quickActions: QuickAction[] = [
@@ -176,9 +177,9 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.recognition.interimResults = true;
     this.recognition.lang = 'en-US';
 
-    this.recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = Array.from(event.results)
-        .map((r: SpeechRecognitionResult) => r[0].transcript)
+    this.recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results as any[])
+        .map((r: any) => r[0].transcript)
         .join('');
       this.inputText.set(transcript);
       if (event.results[event.results.length - 1].isFinal) {
