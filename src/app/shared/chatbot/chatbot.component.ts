@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, signal, ViewChild, ElementRef, AfterViewChecked, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { marked } from 'marked';
 import { ApiService, Account } from '../../core/services/api.service';
 import { ScreenContextService } from '../../core/services/screen-context.service';
@@ -74,6 +75,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   constructor(
     private api: ApiService,
+    private router: Router,
     public screenCtx: ScreenContextService,
     public auth: AuthService,
   ) {}
@@ -138,6 +140,10 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         this.sessionId.set(r.sessionId);
         this.addAssistantMessage(r.response);
         this.isLoading.set(false);
+        // Auto-navigate if bot detected a navigation intent
+        if (r.navigateTo) {
+          setTimeout(() => this.router.navigate([r.navigateTo]), 1000);
+        }
       },
       error: () => {
         this.addAssistantMessage('Sorry, I\'m having trouble connecting right now. Please try again in a moment.');

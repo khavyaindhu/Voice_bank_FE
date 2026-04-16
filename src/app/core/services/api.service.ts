@@ -141,5 +141,5 @@ export interface ZellePayload { fromAccount: string; recipientContact: string; a
 export interface CardPaymentPayload { fromAccount: string; cardId: string; paymentType: string; customAmount?: number; }
 export interface LoanApplicationPayload { loanType: string; principalAmount: number; tenureMonths: number; }
 export interface ChatPayload { message: string; screenContext: string; accountSummary?: object; sessionId?: string; }
-export interface ChatResponse { response: string; sessionId: string; }
+export interface ChatResponse { response: string; sessionId: string; navigateTo?: string | null; }
 export interface TxResponse { message: string; transaction: Transaction; }
