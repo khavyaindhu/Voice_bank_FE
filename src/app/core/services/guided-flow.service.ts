@@ -19,14 +19,22 @@ export interface GuidedFlowState {
 
 // ── Helper: match account by nickname/masked number/type keyword ──
 function matchAccount(input: string, accounts: Account[]): Account | null {
+  if (!accounts.length) return null;
   const lower = input.toLowerCase();
-  return accounts.find(a =>
-    a.nickname.toLowerCase().includes(lower) ||
-    a.maskedNumber.includes(lower) ||
-    a.type.includes(lower) ||
-    (lower.includes('check') && a.type === 'checking') ||
-    (lower.includes('saving') && a.type === 'savings')
-  ) ?? accounts[0];
+
+  // Explicit type keywords first
+  if (lower.includes('check')) return accounts.find(a => a.type === 'checking') ?? accounts[0];
+  if (lower.includes('sav'))   return accounts.find(a => a.type === 'savings')  ?? accounts[0];
+  if (lower.includes('credit') || lower.includes('card')) return accounts.find(a => a.type === 'credit') ?? accounts[0];
+
+  // Masked number or nickname substring
+  const byNumber   = accounts.find(a => a.maskedNumber.includes(lower));
+  if (byNumber) return byNumber;
+  const byNickname = accounts.find(a => lower.includes(a.nickname.toLowerCase().split(' ')[0].toLowerCase()));
+  if (byNickname) return byNickname;
+
+  // Fallback: return first account
+  return accounts[0];
 }
 
 // ── Wire Transfer Flow ────────────────────────────────────────────
@@ -224,6 +232,32 @@ export class GuidedFlowService {
 
   getSteps(screen: string): FlowStep[] {
     return FLOWS[screen] ?? [];
+  }
+
+  /**
+   * Finds a step index by matching field name keywords in the user's input.
+   * e.g. "fill recipient name" → finds the step with field 'recipientName'
+   * Returns -1 if not found.
+   */
+  findStepByLabel(steps: FlowStep[], input: string): number {
+    const lower = input.toLowerCase();
+    const keywordMap: Record<string, string[]> = {
+      fromAccount:      ['from account', 'source account', 'sending account', 'which account'],
+      recipientName:    ['recipient name', 'full name', 'beneficiary name', 'receiver name'],
+      recipientBank:    ['bank name', 'recipient bank', 'beneficiary bank'],
+      routingNumber:    ['routing', 'aba', 'routing number'],
+      swiftCode:        ['swift', 'bic', 'swift code'],
+      toAccount:        ['account number', 'recipient account', 'to account'],
+      recipientContact: ['email', 'phone', 'mobile', 'contact', 'recipient contact'],
+      amount:           ['amount', 'how much', 'transfer amount'],
+      memo:             ['memo', 'note', 'purpose', 'reference'],
+      isInternational:  ['transfer type', 'domestic', 'international', 'type of wire'],
+    };
+    for (let i = 0; i < steps.length; i++) {
+      const keywords = keywordMap[steps[i].field] ?? [];
+      if (keywords.some(kw => lower.includes(kw))) return i;
+    }
+    return -1;
   }
 
   /** Returns the active steps (respecting skipIf) */

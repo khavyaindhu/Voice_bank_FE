@@ -134,7 +134,17 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.flowStepIndex = 0;
     this.flowFilledFields = {};
     this.guidedFlowActive.set(true);
-    this.askNextFlowStep();
+
+    // Ensure accounts are loaded before asking the first step
+    if (this.accounts().length === 0) {
+      this.addAssistantMessage('⏳ Loading your account details...');
+      this.api.getAccounts().subscribe({
+        next: a => { this.accounts.set(a); this.askNextFlowStep(); },
+        error: () => this.askNextFlowStep(),
+      });
+    } else {
+      this.askNextFlowStep();
+    }
   }
 
   private askNextFlowStep(): void {
@@ -158,13 +168,59 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private handleFlowAnswer(msg: string): boolean {
     if (!this.guidedFlowActive()) return false;
 
+    const lower = msg.toLowerCase().trim();
     const screen = this.screenCtx.currentScreen();
     const result = this.guidedFlow.getActiveStep(this.flowSteps, this.flowStepIndex, this.flowFilledFields);
     if (!result) return false;
 
+    // ── Skip / abort commands ─────────────────────────────────────
+    if (/^(skip|next|pass|move on|skip this|continue|go next)$/i.test(lower)) {
+      this.flowStepIndex = result.index + 1;
+      this.guidedFlowChips.set([]);
+      this.askNextFlowStep();
+      return true;
+    }
+
+    if (/^(stop|cancel|abort|exit|quit|end)$/i.test(lower)) {
+      this.guidedFlowActive.set(false);
+      this.guidedFlowChips.set([]);
+      this.addAssistantMessage(`Form fill cancelled. Feel free to ask me anything! 😊`);
+      return true;
+    }
+
+    // ── Step-jump: "step 3", "go to step 4", "switch to step 2" ──
+    const stepJump = lower.match(/(?:step|switch.*step|go.*step|jump.*step)\s*(\d)/);
+    if (stepJump) {
+      const target = parseInt(stepJump[1], 10) - 1; // 0-based
+      if (target >= 0 && target < this.flowSteps.length) {
+        this.flowStepIndex = target;
+        this.guidedFlowChips.set([]);
+        this.askNextFlowStep();
+        return true;
+      }
+    }
+
+    // ── Field-name jump: "fill recipient name", "recipient name please" ──
+    const fieldJump = this.guidedFlow.findStepByLabel(this.flowSteps, lower);
+    if (fieldJump !== -1) {
+      this.flowStepIndex = fieldJump;
+      this.guidedFlowChips.set([]);
+      this.askNextFlowStep();
+      return true;
+    }
+
+    // ── Normal answer: parse the response ────────────────────────
     const parsed = result.step.parse(msg, this.accounts(), this.flowFilledFields);
     if (!parsed) {
-      this.addAssistantMessage(`⚠️ I didn't quite catch that. Please try again.\n\n${result.step.question(this.accounts(), this.flowFilledFields)}`);
+      const chips = result.step.chips ? result.step.chips(this.accounts(), this.flowFilledFields) : [];
+      this.guidedFlowChips.set(chips);
+      const hint = chips.length
+        ? `\n\nChoose one of the options above, or type your answer directly.`
+        : `\n\n💡 Type **skip** to skip this field, or **cancel** to stop.`;
+      this.addAssistantMessage(
+        `⚠️ I didn't catch that. Please answer the current question:\n\n` +
+        result.step.question(this.accounts(), this.flowFilledFields) + hint
+      );
       return true;
     }
 
