@@ -236,22 +236,29 @@ export class GuidedFlowService {
 
   /**
    * Finds a step index by matching field name keywords in the user's input.
+   * ONLY triggers when there is a clear navigation-intent prefix
+   * (fill, go to, switch to, jump to, skip to) — never on plain answers.
    * e.g. "fill recipient name" → finds the step with field 'recipientName'
-   * Returns -1 if not found.
+   * Returns -1 if not found or no nav intent.
    */
   findStepByLabel(steps: FlowStep[], input: string): number {
     const lower = input.toLowerCase();
+
+    // Require an explicit navigation intent prefix to avoid collisions with answers
+    const hasNavIntent = /^(fill|go\s*to|switch\s*to|jump\s*to|skip\s*to|take\s*me\s*to|navigate\s*to)\s+/i.test(lower);
+    if (!hasNavIntent) return -1;
+
     const keywordMap: Record<string, string[]> = {
       fromAccount:      ['from account', 'source account', 'sending account', 'which account'],
       recipientName:    ['recipient name', 'full name', 'beneficiary name', 'receiver name'],
       recipientBank:    ['bank name', 'recipient bank', 'beneficiary bank'],
-      routingNumber:    ['routing', 'aba', 'routing number'],
+      routingNumber:    ['routing', 'aba number', 'routing number'],
       swiftCode:        ['swift', 'bic', 'swift code'],
       toAccount:        ['account number', 'recipient account', 'to account'],
-      recipientContact: ['email', 'phone', 'mobile', 'contact', 'recipient contact'],
-      amount:           ['amount', 'how much', 'transfer amount'],
+      recipientContact: ['recipient contact', 'recipient email', 'recipient phone'],
+      amount:           ['amount', 'transfer amount'],
       memo:             ['memo', 'note', 'purpose', 'reference'],
-      isInternational:  ['transfer type', 'domestic', 'international', 'type of wire'],
+      isInternational:  ['transfer type', 'type of wire'],
     };
     for (let i = 0; i < steps.length; i++) {
       const keywords = keywordMap[steps[i].field] ?? [];
