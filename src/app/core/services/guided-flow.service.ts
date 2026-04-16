@@ -55,7 +55,7 @@ const wireSteps: FlowStep[] = [
     },
     parse: (input, accounts) => {
       const match = matchAccount(input, accounts.filter(a => a.type !== 'rd'));
-      return match ? { value: match._id, display: `${match.nickname} (${match.maskedNumber})` } : null;
+      return match ? { value: match.maskedNumber, display: `${match.nickname} (${match.maskedNumber})` } : null;
     },
     chips: (accounts) => accounts.filter(a => a.type !== 'rd').map(a => a.nickname),
   },
@@ -120,7 +120,7 @@ const achSteps: FlowStep[] = [
     },
     parse: (input, accounts) => {
       const match = matchAccount(input, accounts.filter(a => a.type !== 'rd'));
-      return match ? { value: match._id, display: `${match.nickname} (${match.maskedNumber})` } : null;
+      return match ? { value: match.maskedNumber, display: `${match.nickname} (${match.maskedNumber})` } : null;
     },
     chips: (accounts) => accounts.filter(a => a.type !== 'rd').map(a => a.nickname),
   },
@@ -178,7 +178,7 @@ const zelleSteps: FlowStep[] = [
     },
     parse: (input, accounts) => {
       const match = matchAccount(input, accounts.filter(a => a.type === 'checking' || a.type === 'savings'));
-      return match ? { value: match._id, display: `${match.nickname} (${match.maskedNumber})` } : null;
+      return match ? { value: match.maskedNumber, display: `${match.nickname} (${match.maskedNumber})` } : null;
     },
     chips: (accounts) => accounts.filter(a => a.type === 'checking' || a.type === 'savings').map(a => a.nickname),
   },

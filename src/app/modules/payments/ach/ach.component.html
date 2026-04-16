@@ -22,7 +22,7 @@
 <div class="form-section">
   <form (ngSubmit)="submit()" (change)="onFormChange()">
     <div class="form-grid">
-      <div class="field-group">
+      <div class="field-group" [class.field-highlighted]="highlightedField() === 'fromAccount'">
         <label>From Account *</label>
         <select [(ngModel)]="form.fromAccount" name="fromAccount" required>
           <option value="">Select account</option>
@@ -32,22 +32,22 @@
         </select>
       </div>
 
-      <div class="field-group">
+      <div class="field-group" [class.field-highlighted]="highlightedField() === 'recipientName'">
         <label>Recipient Name *</label>
         <input type="text" [(ngModel)]="form.recipientName" name="recipientName" placeholder="Full legal name" required />
       </div>
 
-      <div class="field-group">
+      <div class="field-group" [class.field-highlighted]="highlightedField() === 'routingNumber'">
         <label>Recipient Routing Number *</label>
         <input type="text" [(ngModel)]="form.routingNumber" name="routingNumber" placeholder="9-digit ABA routing number" maxlength="9" required />
       </div>
 
-      <div class="field-group">
+      <div class="field-group" [class.field-highlighted]="highlightedField() === 'toAccount'">
         <label>Recipient Account Number *</label>
         <input type="text" [(ngModel)]="form.toAccount" name="toAccount" placeholder="Recipient's account number" required />
       </div>
 
-      <div class="field-group">
+      <div class="field-group" [class.field-highlighted]="highlightedField() === 'amount'">
         <label>Amount (USD) *</label>
         <div class="input-prefix">
           <span>$</span>
@@ -60,7 +60,7 @@
         <input type="date" [(ngModel)]="form.scheduledDate" name="scheduledDate" />
       </div>
 
-      <div class="field-group full-width">
+      <div class="field-group full-width" [class.field-highlighted]="highlightedField() === 'memo'">
         <label>Memo (Optional)</label>
         <input type="text" [(ngModel)]="form.memo" name="memo" placeholder="e.g. Rent payment, Invoice #123" />
       </div>

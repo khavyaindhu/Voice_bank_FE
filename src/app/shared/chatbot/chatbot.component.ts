@@ -8,6 +8,7 @@ import { ScreenContextService } from '../../core/services/screen-context.service
 import { AuthService } from '../../core/services/auth.service';
 import { FormFillService } from '../../core/services/form-fill.service';
 import { GuidedFlowService, FlowStep } from '../../core/services/guided-flow.service';
+import { LocalChatService } from '../../core/services/local-chat.service';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -90,6 +91,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     public auth: AuthService,
     private formFill: FormFillService,
     public guidedFlow: GuidedFlowService,
+    private localChat: LocalChatService,
   ) {}
 
   ngOnInit(): void {
@@ -199,34 +201,12 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       return;
     }
 
-    this.isLoading.set(true);
-
-    const accountSummary = {
-      checkingBalance: this.accounts().find(a => a.type === 'checking')?.availableBalance,
-      savingsBalance: this.accounts().find(a => a.type === 'savings')?.balance,
-      creditBalance: this.accounts().find(a => a.type === 'credit')?.balance,
-    };
-
-    this.api.sendChatMessage({
-      message: msg,
-      screenContext: screen,
-      accountSummary,
-      sessionId: this.sessionId() ?? undefined,
-    }).subscribe({
-      next: r => {
-        this.sessionId.set(r.sessionId);
-        this.addAssistantMessage(r.response);
-        this.isLoading.set(false);
-        // Auto-navigate if bot detected a navigation intent
-        if (r.navigateTo) {
-          setTimeout(() => this.router.navigate([r.navigateTo]), 1000);
-        }
-      },
-      error: () => {
-        this.addAssistantMessage('Sorry, I\'m having trouble connecting right now. Please try again in a moment.');
-        this.isLoading.set(false);
-      },
-    });
+    // ── Process locally — no backend call needed ──────────────────
+    const result = this.localChat.process(msg, screen, this.accounts());
+    this.addAssistantMessage(result.text);
+    if (result.navigateTo) {
+      setTimeout(() => this.router.navigate([result.navigateTo!]), 1000);
+    }
   }
 
   private addAssistantMessage(content: string): void {

@@ -14,7 +14,7 @@
 <div class="form-section">
   <div style="margin-bottom:20px">
     <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Transfer Type</label>
-    <div class="toggle-group">
+    <div class="toggle-group" [class.field-highlighted]="highlightedField() === 'isInternational'">
       <button type="button" [class.active]="!isInternational()" (click)="isInternational.set(false)">Domestic</button>
       <button type="button" [class.active]="isInternational()" (click)="isInternational.set(true)">International</button>
     </div>
@@ -22,7 +22,7 @@
 
   <form (ngSubmit)="submit()" (change)="onFormChange()">
     <div class="form-grid">
-      <div class="field-group">
+      <div class="field-group" [class.field-highlighted]="highlightedField() === 'fromAccount'">
         <label>From Account *</label>
         <select [(ngModel)]="form.fromAccount" name="fromAccount" required>
           <option value="">Select account</option>
@@ -32,29 +32,29 @@
         </select>
       </div>
 
-      <div class="field-group">
+      <div class="field-group" [class.field-highlighted]="highlightedField() === 'recipientName'">
         <label>Recipient Full Name *</label>
         <input type="text" [(ngModel)]="form.recipientName" name="recipientName" placeholder="Legal name as on bank account" required />
       </div>
 
-      <div class="field-group">
+      <div class="field-group" [class.field-highlighted]="highlightedField() === 'recipientBank'">
         <label>Recipient Bank Name</label>
         <input type="text" [(ngModel)]="form.recipientBank" name="recipientBank" placeholder="e.g. Chase Bank, Bank of America" />
       </div>
 
       @if (!isInternational()) {
-        <div class="field-group">
+        <div class="field-group" [class.field-highlighted]="highlightedField() === 'routingNumber'">
           <label>ABA Routing Number *</label>
           <input type="text" [(ngModel)]="form.routingNumber" name="routingNumber" placeholder="9-digit routing number" maxlength="9" />
         </div>
       } @else {
-        <div class="field-group">
+        <div class="field-group" [class.field-highlighted]="highlightedField() === 'swiftCode'">
           <label>SWIFT / BIC Code *</label>
           <input type="text" [(ngModel)]="form.swiftCode" name="swiftCode" placeholder="e.g. CHASUS33" />
         </div>
       }
 
-      <div class="field-group">
+      <div class="field-group" [class.field-highlighted]="highlightedField() === 'amount'">
         <label>Amount (USD) *</label>
         <div class="input-prefix">
           <span>$</span>
@@ -62,7 +62,7 @@
         </div>
       </div>
 
-      <div class="field-group full-width">
+      <div class="field-group full-width" [class.field-highlighted]="highlightedField() === 'memo'">
         <label>Wire Purpose / Memo *</label>
         <input type="text" [(ngModel)]="form.memo" name="memo" placeholder="e.g. Invoice payment, Property purchase" />
       </div>

@@ -116,6 +116,28 @@
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+// ── AI auto-fill highlight ────────────────────────────────────────
+.field-highlighted {
+  input, select, textarea {
+    border-color: #6366F1 !important;
+    background: #EEF2FF !important;
+    animation: autofill-flash 1.5s ease forwards;
+  }
+  .input-prefix {
+    border-color: #6366F1 !important;
+    background: #EEF2FF !important;
+    animation: autofill-flash 1.5s ease forwards;
+    input { background: transparent !important; }
+  }
+  label { color: #6366F1; }
+}
+
+@keyframes autofill-flash {
+  0%   { border-color: #6366F1; background: #EEF2FF; }
+  60%  { border-color: #6366F1; background: #EEF2FF; }
+  100% { border-color: var(--usb-gray-200); background: white; }
+}
+
 .toggle-group {
   display: flex;
   gap: 0;

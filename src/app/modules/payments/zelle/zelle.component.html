@@ -14,7 +14,7 @@
 <div class="form-section">
   <form (ngSubmit)="submit()" (change)="onFormChange()">
     <div class="form-grid">
-      <div class="field-group full-width">
+      <div class="field-group full-width" [class.field-highlighted]="highlightedField() === 'fromAccount'">
         <label>From Account *</label>
         <select [(ngModel)]="form.fromAccount" name="fromAccount" required>
           <option value="">Select account</option>
@@ -24,13 +24,13 @@
         </select>
       </div>
 
-      <div class="field-group full-width">
+      <div class="field-group full-width" [class.field-highlighted]="highlightedField() === 'recipientContact'">
         <label>Recipient Email or Mobile Number *</label>
         <input type="text" [(ngModel)]="form.recipientContact" name="recipientContact"
           placeholder="email@example.com or (555) 555-5555" required />
       </div>
 
-      <div class="field-group">
+      <div class="field-group" [class.field-highlighted]="highlightedField() === 'amount'">
         <label>Amount (USD) *</label>
         <div class="input-prefix">
           <span>$</span>
@@ -39,7 +39,7 @@
         <span style="font-size:12px;color:var(--usb-gray-400)">Daily limit: $2,500</span>
       </div>
 
-      <div class="field-group">
+      <div class="field-group" [class.field-highlighted]="highlightedField() === 'memo'">
         <label>Note (Optional)</label>
         <input type="text" [(ngModel)]="form.memo" name="memo" placeholder="e.g. Dinner, Rent, Concert tickets" />
       </div>
