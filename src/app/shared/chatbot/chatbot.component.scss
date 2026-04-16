@@ -105,7 +105,14 @@
 .assistant-name { font-size: 14px; font-weight: 700; }
 .assistant-subtitle { font-size: 11px; opacity: .7; }
 
-.header-actions { display: flex; align-items: center; gap: 4px; }
+.header-actions {
+  display: flex; align-items: center; gap: 4px;
+  button.active {
+    background: rgba(255,255,255,0.25);
+    color: #86efac;
+    border-radius: 6px;
+  }
+}
 
 .screen-chip {
   display: flex;

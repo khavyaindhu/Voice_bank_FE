@@ -25,6 +25,12 @@
           <span class="material-icons">location_on</span>
           {{ screenLabel() }}
         </div>
+        <!-- Auto-speak toggle -->
+        <button (click)="toggleAutoSpeak()"
+          [class.active]="autoSpeak()"
+          [title]="autoSpeak() ? 'Voice ON — click to turn off' : 'Voice OFF — click to enable auto-read'">
+          <span class="material-icons">{{ autoSpeak() ? 'volume_up' : 'volume_off' }}</span>
+        </button>
         <button (click)="clearChat()" title="Clear chat"><span class="material-icons">refresh</span></button>
         <button (click)="toggleMinimize()" [title]="isMinimized() ? 'Expand' : 'Minimize'">
           <span class="material-icons">{{ isMinimized() ? 'expand_less' : 'remove' }}</span>

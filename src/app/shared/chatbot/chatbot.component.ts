@@ -38,6 +38,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   sessionId = signal<string | null>(null);
   isListening = signal(false);
   isSpeaking = signal(false);
+  autoSpeak = signal(false);   // auto-read every response
   accounts = signal<Account[]>([]);
   private shouldScrollToBottom = false;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -149,6 +150,19 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     const htmlContent = marked.parse(content) as string;
     this.messages.update(msgs => [...msgs, { role: 'assistant', content, htmlContent, timestamp: new Date() }]);
     this.shouldScrollToBottom = true;
+    // Auto-speak if enabled
+    if (this.autoSpeak()) {
+      setTimeout(() => this.speakMessage(content), 300);
+    }
+  }
+
+  toggleAutoSpeak(): void {
+    this.autoSpeak.update(v => !v);
+    // If turning off, stop any current speech
+    if (!this.autoSpeak()) {
+      this.synth.cancel();
+      this.isSpeaking.set(false);
+    }
   }
 
   onKeydown(event: KeyboardEvent): void {
