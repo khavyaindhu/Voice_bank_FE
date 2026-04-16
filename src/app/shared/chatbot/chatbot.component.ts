@@ -89,7 +89,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     public screenCtx: ScreenContextService,
     public auth: AuthService,
     private formFill: FormFillService,
-    private guidedFlow: GuidedFlowService,
+    public guidedFlow: GuidedFlowService,
   ) {}
 
   ngOnInit(): void {
