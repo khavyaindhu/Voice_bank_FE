@@ -85,6 +85,27 @@
         }
       </div>
 
+      <!-- Fill Form Banner — shown on payment screens -->
+      @if (guidedFlow.hasFlow(screenCtx.currentScreen()) && !guidedFlowActive() && messages().length <= 2) {
+        <div class="fill-form-banner">
+          <span class="material-icons">auto_fix_high</span>
+          <span>I can fill this form for you step-by-step!</span>
+          <button class="fill-form-btn" (click)="startGuidedFlow()">Fill Form</button>
+        </div>
+      }
+
+      <!-- Guided Flow chips (answer options) -->
+      @if (guidedFlowActive() && guidedFlowChips().length > 0) {
+        <div class="quick-actions-wrap">
+          <div class="qa-label">Choose an option</div>
+          <div class="qa-chips">
+            @for (chip of guidedFlowChips(); track chip) {
+              <button class="qa-chip flow-chip" (click)="sendMessage(chip)">{{ chip }}</button>
+            }
+          </div>
+        </div>
+      }
+
       <!-- Quick Actions -->
       @if (messages().length <= 1) {
         <div class="quick-actions-wrap">

@@ -262,6 +262,41 @@
 }
 
 // ── Quick Actions ─────────────────────────────────────────────
+.fill-form-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 14px 10px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
+  border-radius: 10px;
+  border: 1px solid #C7D2FE;
+  font-size: 12.5px;
+  color: #3730A3;
+  font-weight: 500;
+  .material-icons { font-size: 18px; color: #6366F1; }
+  .fill-form-btn {
+    margin-left: auto;
+    background: #6366F1;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    &:hover { background: #4F46E5; }
+  }
+}
+
+.flow-chip {
+  background: #EEF2FF !important;
+  color: #4338CA !important;
+  border-color: #C7D2FE !important;
+  font-weight: 600 !important;
+}
+
 .quick-actions-wrap {
   padding: 0 14px 10px;
   flex-shrink: 0;

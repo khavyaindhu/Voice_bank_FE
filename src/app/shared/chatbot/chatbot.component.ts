@@ -6,6 +6,8 @@ import { marked } from 'marked';
 import { ApiService, Account } from '../../core/services/api.service';
 import { ScreenContextService } from '../../core/services/screen-context.service';
 import { AuthService } from '../../core/services/auth.service';
+import { FormFillService } from '../../core/services/form-fill.service';
+import { GuidedFlowService, FlowStep } from '../../core/services/guided-flow.service';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -39,8 +41,16 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   sessionId = signal<string | null>(null);
   isListening = signal(false);
   isSpeaking = signal(false);
-  autoSpeak = signal(false);   // auto-read every response
+  autoSpeak = signal(false);
   accounts = signal<Account[]>([]);
+
+  // Guided form-fill flow state
+  guidedFlowActive = signal(false);
+  guidedFlowChips = signal<string[]>([]);
+  private flowSteps: FlowStep[] = [];
+  private flowStepIndex = 0;
+  private flowFilledFields: Record<string, string | boolean> = {};
+
   private shouldScrollToBottom = false;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private recognition: any = null;
@@ -78,6 +88,8 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     private router: Router,
     public screenCtx: ScreenContextService,
     public auth: AuthService,
+    private formFill: FormFillService,
+    private guidedFlow: GuidedFlowService,
   ) {}
 
   ngOnInit(): void {
@@ -111,6 +123,60 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     );
   }
 
+  // ── Guided Flow Methods ──────────────────────────────────────────
+
+  startGuidedFlow(): void {
+    const screen = this.screenCtx.currentScreen();
+    if (!this.guidedFlow.hasFlow(screen)) return;
+    this.flowSteps = this.guidedFlow.getSteps(screen);
+    this.flowStepIndex = 0;
+    this.flowFilledFields = {};
+    this.guidedFlowActive.set(true);
+    this.askNextFlowStep();
+  }
+
+  private askNextFlowStep(): void {
+    const screen = this.screenCtx.currentScreen();
+    const result = this.guidedFlow.getActiveStep(this.flowSteps, this.flowStepIndex, this.flowFilledFields);
+    if (!result) {
+      // All steps done
+      this.guidedFlowActive.set(false);
+      this.guidedFlowChips.set([]);
+      const summary = this.guidedFlow.buildSummary(screen, this.flowFilledFields);
+      this.addAssistantMessage(summary);
+      return;
+    }
+    this.flowStepIndex = result.index;
+    const chips = result.step.chips ? result.step.chips(this.accounts(), this.flowFilledFields) : [];
+    this.guidedFlowChips.set(chips);
+    const question = result.step.question(this.accounts(), this.flowFilledFields);
+    this.addAssistantMessage(question);
+  }
+
+  private handleFlowAnswer(msg: string): boolean {
+    if (!this.guidedFlowActive()) return false;
+
+    const screen = this.screenCtx.currentScreen();
+    const result = this.guidedFlow.getActiveStep(this.flowSteps, this.flowStepIndex, this.flowFilledFields);
+    if (!result) return false;
+
+    const parsed = result.step.parse(msg, this.accounts(), this.flowFilledFields);
+    if (!parsed) {
+      this.addAssistantMessage(`⚠️ I didn't quite catch that. Please try again.\n\n${result.step.question(this.accounts(), this.flowFilledFields)}`);
+      return true;
+    }
+
+    // Store and emit fill event
+    this.flowFilledFields[result.step.field] = parsed.value;
+    this.formFill.emit(result.step.field, parsed.value, screen);
+
+    // Advance to next step
+    this.flowStepIndex = result.index + 1;
+    this.guidedFlowChips.set([]);
+    this.askNextFlowStep();
+    return true;
+  }
+
   sendMessage(text?: string): void {
     const msg = (text ?? this.inputText()).trim();
     if (!msg || this.isLoading()) return;
@@ -122,6 +188,17 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       role: 'user', content: msg, timestamp: new Date(), screenContext: screen,
     }]);
     this.shouldScrollToBottom = true;
+
+    // ── If guided flow is active, handle locally without calling BE ──
+    if (this.handleFlowAnswer(msg)) return;
+
+    // ── Check for "fill form" trigger keywords ────────────────────
+    const fillTrigger = /fill\s*form|guide\s*me|start\s*form|help.*fill|fill.*for\s*me|let'?s\s*go|assist.*form/i.test(msg);
+    if (fillTrigger && this.guidedFlow.hasFlow(screen)) {
+      this.startGuidedFlow();
+      return;
+    }
+
     this.isLoading.set(true);
 
     const accountSummary = {
