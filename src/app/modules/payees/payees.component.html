@@ -218,7 +218,7 @@
           <label>Routing Number <span class="req">*</span></label>
           <input type="text" [(ngModel)]="addForm.routingNumber"
                  maxlength="9" placeholder="9-digit ABA routing number"
-                 (input)="addForm.routingNumber = $any($event.target).value.replace(/\D/g,'').slice(0,9)" />
+                 (input)="onRoutingInput($event)" />
           <span class="field-hint">{{ addForm.routingNumber.length }}/9 digits</span>
         </div>
         <div class="field">

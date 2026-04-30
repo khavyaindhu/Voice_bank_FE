@@ -242,4 +242,10 @@ export class PayeesComponent implements OnInit {
   accountLabel(acc: Account): string {
     return `${acc.nickname} (${acc.maskedNumber}) — $${acc.availableBalance.toLocaleString()} avail.`;
   }
+
+  onRoutingInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.addForm.routingNumber = input.value.replace(/\D/g, '').slice(0, 9);
+    input.value = this.addForm.routingNumber;   // keep DOM in sync
+  }
 }
