@@ -47,15 +47,98 @@
               <div class="msg-avatar"><span class="material-icons">smart_toy</span></div>
             }
 
-            <div class="bubble" [class.user-bubble]="msg.role === 'user'" [class.bot-bubble]="msg.role === 'assistant'">
+            <div class="bubble"
+                 [class.user-bubble]="msg.role === 'user'"
+                 [class.bot-bubble]="msg.role === 'assistant'"
+                 [class.emergency-bubble]="msg.type === 'emergency-options'">
+
               @if (msg.role === 'assistant') {
-                <div class="md-content" [innerHTML]="msg.htmlContent"></div>
-                <div class="bubble-footer">
-                  <span class="ts">{{ msg.timestamp | date:'h:mm a' }}</span>
-                  <button class="speak-btn" (click)="speakMessage(msg.content)" [title]="isSpeaking() ? 'Stop' : 'Read aloud'">
-                    <span class="material-icons">{{ isSpeaking() ? 'stop_circle' : 'volume_up' }}</span>
-                  </button>
-                </div>
+
+                @if (msg.type === 'emergency-options') {
+                  <!-- ── Emergency Card Response Widget ─────────────────── -->
+                  <div class="ec-widget">
+
+                    <!-- Header -->
+                    <div class="ec-header">
+                      <span class="material-icons ec-alert-icon">warning</span>
+                      <div>
+                        <div class="ec-title">I'll handle this immediately</div>
+                        <div class="ec-sub">Visa ****{{ emergencyCard.card.last4 }} · Select actions below</div>
+                      </div>
+                    </div>
+
+                    <!-- Action cards -->
+                    <div class="ec-actions">
+                      @for (action of emergencyActions(); track action.id) {
+                        <div class="ec-action"
+                             [class.ec-selected]="action.selected"
+                             [class.ec-done]="action.status === 'done'"
+                             [class.ec-processing]="action.status === 'processing'"
+                             (click)="toggleEmergencyAction(action.id)">
+
+                          <div class="ec-num">{{ action.number }}</div>
+
+                          <div class="ec-body">
+                            <span class="ec-icon">{{ action.icon }}</span>
+                            <div class="ec-info">
+                              <div class="ec-action-title">{{ action.title }}</div>
+                              <div class="ec-action-sub">
+                                @if (action.status === 'done' && action.resultDetail) {
+                                  <span class="ec-result">✔ {{ action.resultDetail }}</span>
+                                } @else {
+                                  {{ action.subtitle }}
+                                }
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="ec-status">
+                            @if (action.status === 'processing') {
+                              <span class="ec-spinner"></span>
+                            } @else if (action.status === 'done') {
+                              <span class="material-icons ec-done-icon">check_circle</span>
+                            } @else {
+                              <span class="ec-checkbox" [class.ec-checked]="action.selected"></span>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </div>
+
+                    <!-- Footer buttons — hidden while executing -->
+                    @if (!emergencyExecuting()) {
+                      <div class="ec-footer">
+                        <button class="ec-btn-all" (click)="selectAllAndExecute()">
+                          <span class="material-icons">bolt</span>All Three
+                        </button>
+                        <button class="ec-btn-sel"
+                                (click)="executeSelected()"
+                                [disabled]="emergencyActions().every(a => !a.selected)">
+                          Execute Selected
+                        </button>
+                        <button class="ec-btn-cancel" (click)="sendMessage('cancel')">Cancel</button>
+                      </div>
+                    } @else {
+                      <div class="ec-executing">
+                        <span class="ec-spinner"></span>
+                        <span>Processing actions…</span>
+                      </div>
+                    }
+
+                  </div>
+                  <!-- ── / Emergency Card Widget ────────────────────────── -->
+
+                } @else {
+                  <!-- Normal assistant message -->
+                  <div class="md-content" [innerHTML]="msg.htmlContent"></div>
+                  <div class="bubble-footer">
+                    <span class="ts">{{ msg.timestamp | date:'h:mm a' }}</span>
+                    <button class="speak-btn" (click)="speakMessage(msg.content)" [title]="isSpeaking() ? 'Stop' : 'Read aloud'">
+                      <span class="material-icons">{{ isSpeaking() ? 'stop_circle' : 'volume_up' }}</span>
+                    </button>
+                  </div>
+                }
+
               } @else {
                 <div class="user-text">{{ msg.content }}</div>
                 <div class="bubble-footer right">

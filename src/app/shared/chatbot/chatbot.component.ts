@@ -9,6 +9,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { FormFillService } from '../../core/services/form-fill.service';
 import { GuidedFlowService, FlowStep } from '../../core/services/guided-flow.service';
 import { LocalChatService } from '../../core/services/local-chat.service';
+import { EmergencyCardService } from '../../core/services/emergency-card.service';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -16,6 +17,20 @@ export interface ChatMessage {
   htmlContent?: string;
   timestamp: Date;
   screenContext?: string;
+  /** 'emergency-options' renders the interactive card action widget */
+  type?: 'normal' | 'emergency-options';
+}
+
+/** One of the three emergency card actions */
+export interface EmergencyAction {
+  id:          'freeze' | 'dispute' | 'replacement';
+  number:      number;
+  icon:        string;
+  title:       string;
+  subtitle:    string;
+  selected:    boolean;
+  status:      'idle' | 'processing' | 'done';
+  resultDetail: string;
 }
 
 interface QuickAction {
@@ -52,20 +67,25 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private flowStepIndex = 0;
   private flowFilledFields: Record<string, string | boolean> = {};
 
+  // ── Emergency Card Response flow state ──────────────────────────
+  emergencyFlowActive  = signal(false);
+  emergencyExecuting   = signal(false);
+  emergencyActions     = signal<EmergencyAction[]>([]);
+
   private shouldScrollToBottom = false;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private recognition: any = null;
   private synth = window.speechSynthesis;
 
   quickActions: QuickAction[] = [
-    { label: '💳 How to make a Wire Transfer?', prompt: 'How do I make a wire transfer?' },
-    { label: '⚡ Send money via Zelle', prompt: 'How do I send money with Zelle?' },
-    { label: '🏠 Apply for a Home Loan', prompt: 'How do I apply for a home loan? What are the steps?' },
-    { label: '💰 Check my balance', prompt: 'What are my current account balances?' },
-    { label: '🔄 What is ACH Transfer?', prompt: 'Explain ACH transfer and how to initiate one.' },
-    { label: '💳 Card details & rewards', prompt: 'Tell me about my credit card details and reward points.' },
-    { label: '📋 RD account details', prompt: 'Tell me about my Recurring Deposit account details.' },
-    { label: '📊 Loan EMI information', prompt: 'What are my current loan details and EMI amount?' },
+    { label: '🚨 Lost / Stolen Card',            prompt: 'Maya, I lost my card' },
+    { label: '💳 How to make a Wire Transfer?',   prompt: 'How do I make a wire transfer?' },
+    { label: '⚡ Send money via Zelle',            prompt: 'How do I send money with Zelle?' },
+    { label: '🏠 Apply for a Home Loan',           prompt: 'How do I apply for a home loan? What are the steps?' },
+    { label: '💰 Check my balance',               prompt: 'What are my current account balances?' },
+    { label: '🔄 What is ACH Transfer?',           prompt: 'Explain ACH transfer and how to initiate one.' },
+    { label: '💳 Card details & rewards',          prompt: 'Tell me about my credit card details and reward points.' },
+    { label: '📊 Loan EMI information',            prompt: 'What are my current loan details and EMI amount?' },
   ];
 
   screenLabel = computed(() => {
@@ -92,6 +112,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     private formFill: FormFillService,
     public guidedFlow: GuidedFlowService,
     private localChat: LocalChatService,
+    public emergencyCard: EmergencyCardService,
   ) {}
 
   ngOnInit(): void {
@@ -247,6 +268,9 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }]);
     this.shouldScrollToBottom = true;
 
+    // ── Emergency card flow takes top priority ────────────────────
+    if (this.handleEmergencyCardResponse(msg)) return;
+
     // ── If guided flow is active, handle locally without calling BE ──
     if (this.handleFlowAnswer(msg)) return;
 
@@ -259,10 +283,215 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     // ── Process locally — no backend call needed ──────────────────
     const result = this.localChat.process(msg, screen, this.accounts());
+
+    // Handle emergency card flow trigger from LocalChatService
+    if (result.emergencyCardFlow) {
+      this.startEmergencyCardFlow();
+      return;
+    }
+
     this.addAssistantMessage(result.text);
     if (result.navigateTo) {
       setTimeout(() => this.router.navigate([result.navigateTo!]), 1000);
     }
+  }
+
+  // ── Emergency Card Response ──────────────────────────────────────────────
+
+  /** Kick off the emergency card response flow. */
+  startEmergencyCardFlow(): void {
+    const card = this.emergencyCard.card;
+    this.emergencyFlowActive.set(true);
+    this.emergencyExecuting.set(false);
+
+    this.emergencyActions.set([
+      {
+        id:           'freeze',
+        number:       1,
+        icon:         '🔒',
+        title:        `Freeze your ${card.type} ****${card.last4} right now`,
+        subtitle:     'Block all new transactions instantly — reversible anytime',
+        selected:     true,
+        status:       'idle',
+        resultDetail: '',
+      },
+      {
+        id:           'dispute',
+        number:       2,
+        icon:         '📋',
+        title:        'File a dispute for recent unrecognized charges',
+        subtitle:     'Investigate & refund unauthorized transactions (7–10 days)',
+        selected:     true,
+        status:       'idle',
+        resultDetail: '',
+      },
+      {
+        id:           'replacement',
+        number:       3,
+        icon:         '📦',
+        title:        'Request a replacement card',
+        subtitle:     `New card mailed to your address on file — arrives in 3–5 business days`,
+        selected:     true,
+        status:       'idle',
+        resultDetail: '',
+      },
+    ]);
+
+    // Maya's initial acknowledgement
+    this.addAssistantMessage(
+      `🚨 **I'll take care of this immediately!**\n\n` +
+      `Your **${card.type} ****${card.last4}** may be compromised. Should I:`
+    );
+
+    // Append the interactive card options widget
+    this.messages.update(msgs => [...msgs, {
+      role:        'assistant' as const,
+      content:     '',
+      htmlContent: '',
+      timestamp:   new Date(),
+      type:        'emergency-options' as const,
+    }]);
+    this.shouldScrollToBottom = true;
+  }
+
+  /** Toggle an individual action card on/off. */
+  toggleEmergencyAction(id: 'freeze' | 'dispute' | 'replacement'): void {
+    if (this.emergencyExecuting()) return;
+    this.emergencyActions.update(actions =>
+      actions.map(a => a.id === id ? { ...a, selected: !a.selected } : a)
+    );
+  }
+
+  /** Select all three and execute immediately. */
+  selectAllAndExecute(): void {
+    this.emergencyActions.update(actions => actions.map(a => ({ ...a, selected: true })));
+    this.executeSelected();
+  }
+
+  /** Execute whichever actions are currently selected. */
+  async executeSelected(): Promise<void> {
+    const selected = this.emergencyActions().filter(a => a.selected);
+    if (!selected.length) return;
+
+    this.emergencyExecuting.set(true);
+
+    // Mark all selected as processing simultaneously
+    this.emergencyActions.update(actions =>
+      actions.map(a => a.selected ? { ...a, status: 'processing' as const } : a)
+    );
+
+    // Run all actions in parallel — each resolves and updates independently
+    const resultLines: (string | null)[] = await Promise.all(
+      selected.map(async action => {
+        try {
+          switch (action.id) {
+            case 'freeze': {
+              await this.emergencyCard.freezeCard();
+              this.emergencyActions.update(acts =>
+                acts.map(a => a.id === 'freeze'
+                  ? { ...a, status: 'done' as const, resultDetail: 'Blocked instantly' }
+                  : a)
+              );
+              return `🔒 **Card frozen** — Visa ****${this.emergencyCard.card.last4} is now blocked`;
+            }
+            case 'dispute': {
+              const ref = await this.emergencyCard.fileDispute();
+              this.emergencyActions.update(acts =>
+                acts.map(a => a.id === 'dispute'
+                  ? { ...a, status: 'done' as const, resultDetail: `Ref: ${ref}` }
+                  : a)
+              );
+              return `📋 **Dispute filed** — Reference **${ref}** (resolved in 7–10 business days)`;
+            }
+            case 'replacement': {
+              const eta = await this.emergencyCard.requestReplacement();
+              this.emergencyActions.update(acts =>
+                acts.map(a => a.id === 'replacement'
+                  ? { ...a, status: 'done' as const, resultDetail: `Arrives in ${eta}` }
+                  : a)
+              );
+              return `📦 **Replacement requested** — New card arrives in **${eta}**`;
+            }
+            default: return null;
+          }
+        } catch {
+          this.emergencyActions.update(acts =>
+            acts.map(a => a.id === action.id ? { ...a, status: 'idle' as const } : a)
+          );
+          return null;
+        }
+      })
+    );
+
+    this.emergencyFlowActive.set(false);
+    this.emergencyExecuting.set(false);
+
+    const lines  = resultLines.filter(Boolean) as string[];
+    const header = lines.length === 3
+      ? `✅ **Done. All three actions completed!**`
+      : `✅ **Done! ${lines.length} action${lines.length > 1 ? 's' : ''} completed.**`;
+
+    this.addAssistantMessage(
+      `${header}\n\n` +
+      lines.join('\n') +
+      `\n\n📱 You'll receive an **SMS & email confirmation** shortly.\n` +
+      `📞 Need immediate help? **1-800-285-8585**\n\n` +
+      `_Stay safe — we've got you covered. 🛡️_`
+    );
+  }
+
+  /**
+   * Intercept user messages while emergency flow is active.
+   * Parses "yes all three", "just freeze", "cancel", etc.
+   * Returns true if the message was consumed by the emergency flow.
+   */
+  private handleEmergencyCardResponse(msg: string): boolean {
+    if (!this.emergencyFlowActive() || this.emergencyExecuting()) return false;
+
+    const lower = msg.toLowerCase().trim();
+
+    // Cancel
+    if (/^(cancel|stop|abort|never\s*mind|exit|no|nope)$/.test(lower)) {
+      this.emergencyFlowActive.set(false);
+      this.addAssistantMessage(
+        `No problem — your card has **not** been changed.\n\n` +
+        `If you need help later, just say **"I lost my card"**.\n` +
+        `📞 Urgent? Call **1-800-285-8585** anytime.`
+      );
+      return true;
+    }
+
+    // All three
+    if (/\b(yes|all|all\s*three|everything|do\s*(it\s*)?all|go\s*ahead|confirm|proceed|execute|run\s*all|sure|yep|yeah|absolutely)\b/.test(lower)) {
+      this.selectAllAndExecute();
+      return true;
+    }
+
+    // Specific selection by keyword
+    const wantsFreeze      = /freeze|lock|block|stop.*card|option\s*1|\b1\b/.test(lower);
+    const wantsDispute     = /dispute|charg|unauthorized|unrecognized|fraudul|option\s*2|\b2\b/.test(lower);
+    const wantsReplacement = /replace|new\s*card|replacement|deliver|ship|option\s*3|\b3\b/.test(lower);
+
+    if (wantsFreeze || wantsDispute || wantsReplacement) {
+      this.emergencyActions.update(actions => actions.map(a => ({
+        ...a,
+        selected: (a.id === 'freeze'       && wantsFreeze)      ||
+                  (a.id === 'dispute'      && wantsDispute)     ||
+                  (a.id === 'replacement'  && wantsReplacement),
+      })));
+      this.executeSelected();
+      return true;
+    }
+
+    // Unrecognised response
+    this.addAssistantMessage(
+      `I didn't quite catch that. You can:\n\n` +
+      `- Say **"Yes, all three"** to execute all actions at once\n` +
+      `- Say **"Just freeze"** / **"Freeze and replacement"** for specific actions\n` +
+      `- Click the action cards above to select/deselect, then press **Execute**\n` +
+      `- Say **"Cancel"** to leave the card as-is`
+    );
+    return true;
   }
 
   private addAssistantMessage(content: string): void {

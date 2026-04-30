@@ -4,6 +4,8 @@ import { Account } from './api.service';
 export interface LocalChatResult {
   text: string;
   navigateTo?: string;
+  /** When true the chatbot should start the Emergency Card Response flow */
+  emergencyCardFlow?: boolean;
 }
 
 // ── Navigation intents ────────────────────────────────────────────
@@ -209,6 +211,17 @@ export class LocalChatService {
 
   process(message: string, screen: string, accounts: Account[] = []): LocalChatResult {
     const lower = message.toLowerCase().trim();
+
+    // 0. Emergency card flow — lost / stolen / missing card
+    //    Must run BEFORE the generic freeze/lost intent in the INTENTS array.
+    const isEmergency =
+      /lost.*(?:my\s*)?card|(?:my\s*)?card.*(?:is\s*)?lost/.test(lower) ||
+      /stolen.*(?:my\s*)?card|(?:my\s*)?card.*(?:was\s*|is\s*)?stolen/.test(lower) ||
+      /missing.*(?:my\s*)?card|(?:my\s*)?card.*(?:is\s*)?missing/.test(lower) ||
+      /someone.*stole.*card|card.*stolen|i\s*lost\s*it/.test(lower);
+    if (isEmergency) {
+      return { text: '', emergencyCardFlow: true };
+    }
 
     // 1. Navigation intent — "go to X" or just the page name after go-prefix
     const hasGoPrefix = GO_PREFIX.test(lower);
