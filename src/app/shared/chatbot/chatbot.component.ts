@@ -268,8 +268,22 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }]);
     this.shouldScrollToBottom = true;
 
-    // ── Emergency card flow takes top priority ────────────────────
+    // ── Emergency card flow: intercept active-flow replies ───────────
     if (this.handleEmergencyCardResponse(msg)) return;
+
+    // ── Emergency card flow: detect trigger phrases ───────────────────
+    // Checked here (before localChat.process) so it can never be shadowed
+    // by a pattern in the INTENTS array (e.g. "my card" or "freeze").
+    const isCardEmergency =
+      /lost.*(?:my\s+)?card|(?:my\s+)?card.*(?:is\s+)?lost/i.test(msg)   ||
+      /stolen.*(?:my\s+)?card|(?:my\s+)?card.*(?:was\s+|is\s+)?stolen/i.test(msg) ||
+      /missing.*(?:my\s+)?card|(?:my\s+)?card.*(?:is\s+)?missing/i.test(msg) ||
+      /freeze\s+my\s+card|block\s+my\s+card|lock\s+my\s+card/i.test(msg)  ||
+      /unauthorized.*charg|someone.*used.*my\s+card|card.*compromised/i.test(msg);
+    if (isCardEmergency) {
+      this.startEmergencyCardFlow();
+      return;
+    }
 
     // ── If guided flow is active, handle locally without calling BE ──
     if (this.handleFlowAnswer(msg)) return;
@@ -283,13 +297,6 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     // ── Process locally — no backend call needed ──────────────────
     const result = this.localChat.process(msg, screen, this.accounts());
-
-    // Handle emergency card flow trigger from LocalChatService
-    if (result.emergencyCardFlow) {
-      this.startEmergencyCardFlow();
-      return;
-    }
-
     this.addAssistantMessage(result.text);
     if (result.navigateTo) {
       setTimeout(() => this.router.navigate([result.navigateTo!]), 1000);
