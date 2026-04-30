@@ -559,7 +559,26 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   startQuickPayFlow(payee: Payee, amount: number): void {
     this.quickPayPending.set({ payee, amount });
 
-    // Pick the first checking/savings account as default
+    // If accounts haven't loaded yet, fetch them first then show widget
+    if (this.accounts().length === 0) {
+      this.addAssistantMessage('⏳ Loading your account details…');
+      this.api.getAccounts().subscribe({
+        next: a => {
+          this.accounts.set(a);
+          this._showQuickPayWidget(payee, amount);
+        },
+        error: () => {
+          this.quickPayPending.set(null);
+          this.addAssistantMessage('❌ Unable to load your accounts. Please try again.');
+        },
+      });
+    } else {
+      this._showQuickPayWidget(payee, amount);
+    }
+  }
+
+  /** Internal — renders the confirm widget once accounts are guaranteed loaded. */
+  private _showQuickPayWidget(payee: Payee, amount: number): void {
     const fromAccountId = this.accounts().find(
       a => a.type === 'checking' || a.type === 'savings'
     )?._id ?? '';
