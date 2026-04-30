@@ -65,6 +65,22 @@ export class ApiService {
   sendChatMessage(payload: ChatPayload): Observable<ChatResponse> {
     return this.http.post<ChatResponse>(`${this.base}/chat/message`, payload);
   }
+
+  // Payees
+  getPayees(): Observable<ApiPayee[]> {
+    return this.http.get<ApiPayee[]>(`${this.base}/payees`);
+  }
+  createPayee(payload: CreatePayeePayload): Observable<{ message: string; payee: ApiPayee }> {
+    return this.http.post<{ message: string; payee: ApiPayee }>(`${this.base}/payees`, payload);
+  }
+  deletePayee(id: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.base}/payees/${id}`);
+  }
+  recordPayeePayment(id: string, amount: number): Observable<{ message: string; totalTransfers: number }> {
+    return this.http.patch<{ message: string; totalTransfers: number }>(
+      `${this.base}/payees/${id}/record-payment`, { amount }
+    );
+  }
 }
 
 // ---- Type definitions ----
@@ -143,3 +159,30 @@ export interface LoanApplicationPayload { loanType: string; principalAmount: num
 export interface ChatPayload { message: string; screenContext: string; accountSummary?: object; sessionId?: string; }
 export interface ChatResponse { response: string; sessionId: string; navigateTo?: string | null; }
 export interface TxResponse { message: string; transaction: Transaction; }
+
+export interface ApiPayee {
+  id: string;
+  nickname: string;
+  fullName: string;
+  bankName: string;
+  routingNumber: string;
+  accountNumber: string;
+  accountType: 'checking' | 'savings';
+  transferType: 'wire' | 'ach';
+  category: 'business' | 'personal' | 'family' | 'utility';
+  avatarColor: string;
+  lastPaidAmount?: number;
+  lastPaidDate?: string;
+  totalTransfers: number;
+}
+
+export interface CreatePayeePayload {
+  nickname: string;
+  fullName: string;
+  bankName: string;
+  routingNumber: string;
+  accountNumber: string;
+  accountType: 'checking' | 'savings';
+  transferType: 'wire' | 'ach';
+  category: 'business' | 'personal' | 'family' | 'utility';
+}

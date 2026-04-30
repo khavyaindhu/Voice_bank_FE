@@ -35,6 +35,7 @@ export class LayoutComponent {
         { label: 'History', route: '/payments/history' },
       ],
     },
+    { label: 'Quick Pay', icon: 'contacts', route: '/payees' },
     { label: 'Cards', icon: 'credit_card', route: '/cards' },
     { label: 'Loans', icon: 'home', route: '/loans' },
   ];

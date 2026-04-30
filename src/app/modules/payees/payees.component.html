@@ -1,0 +1,410 @@
+<!-- ─────────────────────────────── PAGE HEADER ─────────────────────────── -->
+<div class="page-wrap">
+
+  <div class="page-header">
+    <div class="header-left">
+      <h2>
+        <span class="material-icons page-icon">contacts</span>
+        Quick Pay
+      </h2>
+      <p>Saved payees — send money in two steps, no form filling.</p>
+    </div>
+    <button class="btn-add" (click)="openAddDrawer()">
+      <span class="material-icons">add</span>
+      Add Payee
+    </button>
+  </div>
+
+  <!-- Stats bar -->
+  <div class="stats-row">
+    <div class="stat-chip">
+      <span class="material-icons">contacts</span>
+      <span>{{ payeeSvc.payees().length }} Saved Payees</span>
+    </div>
+    <div class="stat-chip accent">
+      <span class="material-icons">bolt</span>
+      <span>Maya Quick Pay enabled</span>
+    </div>
+    <div class="stat-chip hint">
+      <span class="material-icons">record_voice_over</span>
+      <span>Say "Maya, send $500 to Mom"</span>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="search-wrap">
+    <span class="material-icons search-icon">search</span>
+    <input
+      class="search-input"
+      type="text"
+      placeholder="Search payees by name or bank…"
+      [value]="searchQ()"
+      (input)="searchQ.set($any($event.target).value)"
+    />
+    @if (searchQ()) {
+      <button class="clear-search" (click)="searchQ.set('')">
+        <span class="material-icons">close</span>
+      </button>
+    }
+  </div>
+
+  <!-- ─────────────────── PAYEE GRID ─────────────────── -->
+  @if (payeeSvc.loading()) {
+    <div class="loading-state">
+      <span class="load-spinner"></span>
+      <span>Loading your saved payees…</span>
+    </div>
+  } @else if (filtered().length === 0) {
+    <div class="empty-state">
+      <span class="material-icons empty-icon">contacts</span>
+      <div class="empty-title">No payees found</div>
+      <div class="empty-sub">Add a payee to start sending payments in seconds.</div>
+      <button class="btn-primary" (click)="openAddDrawer()">
+        <span class="material-icons">add</span> Add First Payee
+      </button>
+    </div>
+  } @else {
+    <div class="payees-grid">
+      @for (payee of filtered(); track payee.id) {
+        <div class="payee-card">
+
+          <!-- Delete confirm overlay (card-level) -->
+          @if (deleteId() === payee.id) {
+            <div class="delete-confirm-overlay">
+              <span class="material-icons warn-icon">warning_amber</span>
+              <p>Remove <strong>{{ payee.nickname }}</strong> from your payees?</p>
+              <div class="dc-actions">
+                <button class="dc-cancel" (click)="cancelDelete()">Cancel</button>
+                <button class="dc-confirm" (click)="executeDelete()">Remove</button>
+              </div>
+            </div>
+          }
+
+          <!-- Card header -->
+          <div class="card-header">
+            <div class="avatar" [style.background]="payee.avatarColor">
+              {{ initials(payee.nickname) }}
+            </div>
+            <div class="card-info">
+              <div class="payee-nickname">{{ payee.nickname }}</div>
+              <div class="payee-fullname">{{ payee.fullName }}</div>
+            </div>
+            <button class="delete-btn" (click)="confirmDelete(payee.id)" title="Remove payee">
+              <span class="material-icons">delete_outline</span>
+            </button>
+          </div>
+
+          <!-- Bank details -->
+          <div class="bank-row">
+            <span class="material-icons bank-icon">account_balance</span>
+            <div>
+              <div class="bank-name">{{ payee.bankName }}</div>
+              <div class="acct-num">{{ payee.accountType | titlecase }} {{ masked(payee.accountNumber) }}</div>
+            </div>
+          </div>
+
+          <!-- Tags row -->
+          <div class="tags-row">
+            <span class="tag tag-transfer">
+              <span class="material-icons">{{ payee.transferType === 'wire' ? 'swap_horiz' : 'sync_alt' }}</span>
+              {{ txLabel(payee.transferType) }}
+            </span>
+            <span class="tag tag-category">
+              <span class="material-icons">{{ catIcon(payee.category) }}</span>
+              {{ payee.category | titlecase }}
+            </span>
+          </div>
+
+          <!-- Last paid -->
+          @if (payee.lastPaidAmount) {
+            <div class="last-paid">
+              <span class="material-icons">history</span>
+              Last paid {{ formatCurrency(payee.lastPaidAmount) }} ·
+              {{ payee.lastPaidDate | date:'MMM d, y' }}
+              · {{ payee.totalTransfers }} transfers
+            </div>
+          }
+
+          <!-- Pay button -->
+          <button class="btn-pay" (click)="openPayModal(payee)">
+            <span class="material-icons">send</span>
+            Pay Now
+          </button>
+
+        </div>
+      }
+    </div>
+  }
+
+</div>
+
+<!-- ═══════════════════════════ OVERLAYS ═════════════════════════════════════ -->
+
+@if (view() !== 'list') {
+  <div class="overlay-backdrop" (click)="closeOverlay()"></div>
+}
+
+<!-- ─────────────── ADD PAYEE DRAWER ─────────────── -->
+@if (view() === 'add') {
+  <div class="drawer" role="dialog" aria-label="Add Payee">
+
+    <div class="drawer-header">
+      <div>
+        <div class="drawer-title">Add New Payee</div>
+        <div class="drawer-sub">Details are saved securely for future Quick Pay</div>
+      </div>
+      <button class="drawer-close" (click)="closeOverlay()">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    <div class="drawer-body">
+
+      <!-- Payee identity -->
+      <div class="form-section-label">Payee Identity</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Nickname <span class="req">*</span></label>
+          <input type="text" [(ngModel)]="addForm.nickname"
+                 placeholder="e.g. ABC Vendors, Mom, Landlord" />
+          <span class="field-hint">This is how Maya will recognise the payee by voice</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Full Legal Name <span class="req">*</span></label>
+          <input type="text" [(ngModel)]="addForm.fullName"
+                 placeholder="Full name as on the bank account" />
+        </div>
+      </div>
+
+      <!-- Category & transfer type -->
+      <div class="form-section-label" style="margin-top:20px">Payment Settings</div>
+      <div class="field-row two-col">
+        <div class="field">
+          <label>Category <span class="req">*</span></label>
+          <select [(ngModel)]="addForm.category">
+            @for (opt of categoryOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label>Default Transfer Type <span class="req">*</span></label>
+          <select [(ngModel)]="addForm.transferType">
+            @for (opt of transferTypeOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+          <span class="field-hint">
+            @for (opt of transferTypeOptions; track opt.value) {
+              @if (opt.value === addForm.transferType) { {{ opt.hint }} }
+            }
+          </span>
+        </div>
+      </div>
+
+      <!-- Bank details -->
+      <div class="form-section-label" style="margin-top:20px">Bank Details</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Bank Name <span class="req">*</span></label>
+          <input type="text" [(ngModel)]="addForm.bankName"
+                 placeholder="e.g. Chase Bank, Wells Fargo" />
+        </div>
+      </div>
+      <div class="field-row two-col">
+        <div class="field">
+          <label>Routing Number <span class="req">*</span></label>
+          <input type="text" [(ngModel)]="addForm.routingNumber"
+                 maxlength="9" placeholder="9-digit ABA routing number"
+                 (input)="addForm.routingNumber = $any($event.target).value.replace(/\D/g,'').slice(0,9)" />
+          <span class="field-hint">{{ addForm.routingNumber.length }}/9 digits</span>
+        </div>
+        <div class="field">
+          <label>Account Type <span class="req">*</span></label>
+          <select [(ngModel)]="addForm.accountType">
+            <option value="checking">Checking</option>
+            <option value="savings">Savings</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row two-col">
+        <div class="field">
+          <label>Account Number <span class="req">*</span></label>
+          <input type="password" [(ngModel)]="addForm.accountNumber"
+                 placeholder="Enter account number"
+                 autocomplete="off" />
+        </div>
+        <div class="field">
+          <label>Confirm Account Number <span class="req">*</span></label>
+          <input type="password" [(ngModel)]="addForm.confirmAccountNumber"
+                 placeholder="Re-enter account number"
+                 autocomplete="off"
+                 [class.input-error]="addForm.confirmAccountNumber && addForm.accountNumber !== addForm.confirmAccountNumber" />
+          @if (addForm.confirmAccountNumber && addForm.accountNumber !== addForm.confirmAccountNumber) {
+            <span class="field-error">Numbers don't match</span>
+          }
+        </div>
+      </div>
+
+      @if (saveError()) {
+        <div class="alert-error">{{ saveError() }}</div>
+      }
+
+    </div>
+
+    <div class="drawer-footer">
+      <button class="btn-ghost" (click)="closeOverlay()">Cancel</button>
+      <button class="btn-primary" [disabled]="!addFormValid || saving()" (click)="savePayee()">
+        @if (saving()) {
+          <span class="btn-spinner"></span> Verifying…
+        } @else {
+          <span class="material-icons">save</span> Save Payee
+        }
+      </button>
+    </div>
+
+  </div>
+}
+
+<!-- ─────────────── QUICK PAY MODAL ─────────────── -->
+@if (view() === 'pay' && selected()) {
+  <div class="modal" role="dialog" aria-label="Quick Pay">
+
+    @if (!payResult()) {
+      <!-- Send form -->
+      <div class="modal-header">
+        <div class="modal-avatar" [style.background]="selected()!.avatarColor">
+          {{ initials(selected()!.nickname) }}
+        </div>
+        <div>
+          <div class="modal-title">Pay {{ selected()!.nickname }}</div>
+          <div class="modal-sub">
+            {{ selected()!.fullName }} · {{ selected()!.bankName }} · {{ masked(selected()!.accountNumber) }}
+          </div>
+        </div>
+        <button class="drawer-close" (click)="closeOverlay()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Transfer type info banner -->
+        <div class="tx-info-banner" [class.tx-wire]="selected()!.transferType === 'wire'">
+          <span class="material-icons">
+            {{ selected()!.transferType === 'wire' ? 'swap_horiz' : 'sync_alt' }}
+          </span>
+          <div>
+            <strong>{{ txLabel(selected()!.transferType) }}</strong>
+            @if (selected()!.transferType === 'wire') {
+              <span> · Same-day before 4PM CT · Fee: $25</span>
+            } @else {
+              <span> · 1–3 business days · Free</span>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <label>From Account <span class="req">*</span></label>
+          <select [(ngModel)]="payForm.fromAccount">
+            @for (acc of checkingAccounts; track acc._id) {
+              <option [value]="acc._id">{{ accountLabel(acc) }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="amount-field">
+          <label>Amount <span class="req">*</span></label>
+          <div class="amount-wrap">
+            <span class="dollar-sign">$</span>
+            <input
+              type="number"
+              [(ngModel)]="payForm.amount"
+              placeholder="0.00"
+              min="0.01"
+              step="0.01"
+            />
+          </div>
+          @if (selected()!.lastPaidAmount) {
+            <span class="field-hint">
+              Last time: {{ formatCurrency(selected()!.lastPaidAmount!) }}
+              — <button class="use-last" type="button"
+                        (click)="payForm.amount = selected()!.lastPaidAmount!.toString()">use again</button>
+            </span>
+          }
+        </div>
+
+        <div class="field">
+          <label>Memo (optional)</label>
+          <input type="text" [(ngModel)]="payForm.memo"
+                 placeholder="e.g. January invoice, rent payment" />
+        </div>
+
+        <!-- Summary -->
+        @if (payFormValid) {
+          <div class="pay-summary">
+            <div class="ps-row">
+              <span>Sending to</span>
+              <strong>{{ selected()!.nickname }}</strong>
+            </div>
+            <div class="ps-row">
+              <span>Account</span>
+              <strong>{{ selected()!.bankName }} {{ masked(selected()!.accountNumber) }}</strong>
+            </div>
+            <div class="ps-row">
+              <span>Amount</span>
+              <strong class="ps-amount">{{ formatCurrency(+payForm.amount) }}</strong>
+            </div>
+            <div class="ps-row">
+              <span>Method</span>
+              <strong>{{ txLabel(selected()!.transferType) }}</strong>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-ghost" (click)="closeOverlay()">Cancel</button>
+        <button class="btn-pay-confirm" [disabled]="!payFormValid || paying()"
+                (click)="sendPayment()">
+          @if (paying()) {
+            <span class="btn-spinner"></span> Processing…
+          } @else {
+            <span class="material-icons">send</span>
+            Send {{ payForm.amount ? formatCurrency(+payForm.amount) : 'Payment' }}
+          }
+        </button>
+      </div>
+
+    } @else {
+      <!-- Result screen -->
+      <div class="result-screen">
+        @if (payResult()!.success) {
+          <div class="result-icon success">
+            <span class="material-icons">check_circle</span>
+          </div>
+          <div class="result-title">Payment Sent!</div>
+          <div class="result-sub">Your payment to <strong>{{ selected()!.nickname }}</strong> has been initiated.</div>
+          <div class="result-ref">Ref: {{ payResult()!.ref }}</div>
+          <div class="result-eta">
+            @if (selected()!.transferType === 'wire') {
+              Expected same-day (before 4PM CT)
+            } @else {
+              Expected in 1–3 business days
+            }
+          </div>
+        } @else {
+          <div class="result-icon error">
+            <span class="material-icons">error_outline</span>
+          </div>
+          <div class="result-title">Payment Failed</div>
+          <div class="result-sub">{{ payResult()!.ref }}</div>
+        }
+        <button class="btn-primary" style="margin-top:24px" (click)="closeOverlay()">Done</button>
+      </div>
+    }
+
+  </div>
+}

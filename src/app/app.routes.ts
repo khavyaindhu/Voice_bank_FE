@@ -54,6 +54,11 @@ export const routes: Routes = [
         ],
       },
       {
+        path: 'payees',
+        loadComponent: () => import('./modules/payees/payees.component').then(m => m.PayeesComponent),
+        data: { screen: 'payees' },
+      },
+      {
         path: 'cards',
         loadComponent: () => import('./modules/cards/cards.component').then(m => m.CardsComponent),
         data: { screen: 'cards' },

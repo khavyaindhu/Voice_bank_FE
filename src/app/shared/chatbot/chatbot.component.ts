@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, signal, ViewChild, ElementRef, AfterViewChecked, computed } from '@angular/core';
+import { lastValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -10,6 +11,7 @@ import { FormFillService } from '../../core/services/form-fill.service';
 import { GuidedFlowService, FlowStep } from '../../core/services/guided-flow.service';
 import { LocalChatService } from '../../core/services/local-chat.service';
 import { EmergencyCardService } from '../../core/services/emergency-card.service';
+import { PayeeService, Payee } from '../../core/services/payee.service';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -17,8 +19,10 @@ export interface ChatMessage {
   htmlContent?: string;
   timestamp: Date;
   screenContext?: string;
-  /** 'emergency-options' renders the interactive card action widget */
-  type?: 'normal' | 'emergency-options';
+  /** Special bubble types for interactive widgets */
+  type?: 'normal' | 'emergency-options' | 'quick-pay-confirm';
+  /** Attached quick-pay payload for the confirm widget */
+  quickPay?: { payee: Payee; amount: number; fromAccountId: string };
 }
 
 /** One of the three emergency card actions */
@@ -72,6 +76,11 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   emergencyExecuting   = signal(false);
   emergencyActions     = signal<EmergencyAction[]>([]);
 
+  // ── Quick Pay flow state ─────────────────────────────────────────
+  /** Set while waiting for user to confirm a quick-pay from Maya */
+  quickPayPending = signal<{ payee: Payee; amount: number } | null>(null);
+  quickPayExecuting = signal(false);
+
   /** True when no action card is selected — used to disable the "Execute Selected" button. */
   get noActionsSelected(): boolean {
     return this.emergencyActions().every(a => !a.selected);
@@ -83,14 +92,14 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private synth = window.speechSynthesis;
 
   quickActions: QuickAction[] = [
-    { label: '🚨 Lost / Stolen Card',            prompt: 'Maya, I lost my card' },
-    { label: '💳 How to make a Wire Transfer?',   prompt: 'How do I make a wire transfer?' },
-    { label: '⚡ Send money via Zelle',            prompt: 'How do I send money with Zelle?' },
-    { label: '🏠 Apply for a Home Loan',           prompt: 'How do I apply for a home loan? What are the steps?' },
-    { label: '💰 Check my balance',               prompt: 'What are my current account balances?' },
-    { label: '🔄 What is ACH Transfer?',           prompt: 'Explain ACH transfer and how to initiate one.' },
-    { label: '💳 Card details & rewards',          prompt: 'Tell me about my credit card details and reward points.' },
-    { label: '📊 Loan EMI information',            prompt: 'What are my current loan details and EMI amount?' },
+    { label: '⚡ Send $500 to Mom',               prompt: 'Maya, send $500 to Mom' },
+    { label: '💸 Pay ABC Vendors $10,000',         prompt: 'Maya, send $10000 to ABC Vendors' },
+    { label: '🚨 Lost / Stolen Card',              prompt: 'Maya, I lost my card' },
+    { label: '💳 How to make a Wire Transfer?',    prompt: 'How do I make a wire transfer?' },
+    { label: '⚡ Send money via Zelle',             prompt: 'How do I send money with Zelle?' },
+    { label: '🏠 Apply for a Home Loan',            prompt: 'How do I apply for a home loan? What are the steps?' },
+    { label: '💰 Check my balance',                prompt: 'What are my current account balances?' },
+    { label: '📊 Loan EMI information',             prompt: 'What are my current loan details and EMI amount?' },
   ];
 
   screenLabel = computed(() => {
@@ -102,6 +111,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       'payments/card': 'Card Payment',
       'payments/history': 'Transaction History',
       'accounts': 'Accounts',
+      'payees': 'Quick Pay',
       'cards': 'Cards',
       'loans': 'Loans',
       'loans/apply': 'Loan Application',
@@ -118,10 +128,13 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     public guidedFlow: GuidedFlowService,
     private localChat: LocalChatService,
     public emergencyCard: EmergencyCardService,
+    public payeeSvc: PayeeService,
   ) {}
 
   ngOnInit(): void {
     this.api.getAccounts().subscribe({ next: a => this.accounts.set(a), error: () => {} });
+    // Pre-load payees so Maya can do Quick Pay from any screen
+    this.payeeSvc.load();
     this.initSpeechRecognition();
   }
 
@@ -288,6 +301,40 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (isCardEmergency) {
       this.startEmergencyCardFlow();
       return;
+    }
+
+    // ── Quick Pay: intercept active-flow replies ─────────────────────
+    if (this.handleQuickPayResponse(msg)) return;
+
+    // ── Quick Pay: detect "send $X to [payee]" trigger ───────────────
+    // Pattern: send/pay/transfer + dollar amount + to + payee name
+    const qpMatch = msg.match(
+      /(?:send|pay|transfer|wire)\s+\$?([\d,]+(?:\.\d+)?)\s+(?:to|for)\s+(.+)/i
+    ) ?? msg.match(
+      /(?:send|pay|transfer|wire)\s+(?:to\s+)?(.+?)\s+\$?([\d,]+(?:\.\d+)?)/i
+    );
+    if (qpMatch) {
+      // First pattern: amount is group 1, name is group 2
+      // Second pattern: name is group 1, amount is group 2
+      const isFirstPattern = /(?:send|pay|transfer|wire)\s+\$?[\d]/i.test(msg);
+      const amountStr = (isFirstPattern ? qpMatch[1] : qpMatch[2]).replace(/,/g, '');
+      const nameStr   = (isFirstPattern ? qpMatch[2] : qpMatch[1]).trim();
+      const amount    = parseFloat(amountStr);
+      if (amount > 0 && nameStr) {
+        const payee = this.payeeSvc.findByName(nameStr);
+        if (payee) {
+          this.startQuickPayFlow(payee, amount);
+          return;
+        }
+        // Payee not found — helpful suggestion
+        this.addAssistantMessage(
+          `I couldn't find a saved payee matching **"${nameStr}"**.\n\n` +
+          `Your saved payees are:\n` +
+          this.payeeSvc.payees().map(p => `- **${p.nickname}** (${p.bankName})`).join('\n') +
+          `\n\nOr go to **Quick Pay** to add a new payee, then send instantly!`
+        );
+        return;
+      }
     }
 
     // ── If guided flow is active, handle locally without calling BE ──
@@ -504,6 +551,139 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       `- Say **"Cancel"** to leave the card as-is`
     );
     return true;
+  }
+
+  // ── Quick Pay Flow ───────────────────────────────────────────────────────────
+
+  /** Show the quick-pay confirm widget in the chat. */
+  startQuickPayFlow(payee: Payee, amount: number): void {
+    this.quickPayPending.set({ payee, amount });
+
+    // Pick the first checking/savings account as default
+    const fromAccountId = this.accounts().find(
+      a => a.type === 'checking' || a.type === 'savings'
+    )?._id ?? '';
+
+    // Maya's acknowledgement text
+    this.addAssistantMessage(
+      `Got it! Here's a summary of your payment. Review and confirm below 👇`
+    );
+
+    // Append the confirm widget message
+    this.messages.update(msgs => [...msgs, {
+      role:        'assistant' as const,
+      content:     '',
+      htmlContent: '',
+      timestamp:   new Date(),
+      type:        'quick-pay-confirm' as const,
+      quickPay:    { payee, amount, fromAccountId },
+    }]);
+    this.shouldScrollToBottom = true;
+  }
+
+  /**
+   * Confirm button clicked inside the quick-pay widget.
+   * Executes the actual API call.
+   */
+  async executeQuickPay(msg: ChatMessage): Promise<void> {
+    const qp = msg.quickPay;
+    if (!qp || this.quickPayExecuting()) return;
+    this.quickPayExecuting.set(true);
+
+    const { payee, amount, fromAccountId } = qp;
+
+    try {
+      let ref = '';
+      if (payee.transferType === 'wire') {
+        const res = await lastValueFrom(this.api.initiateWire({
+          fromAccount:   fromAccountId,
+          recipientName: payee.fullName,
+          recipientBank: payee.bankName,
+          routingNumber: payee.routingNumber,
+          amount,
+          memo: `Quick Pay via Maya to ${payee.nickname}`,
+        }));
+        ref = res?.transaction?.referenceNumber ?? 'WIRE-REF';
+      } else {
+        const res = await lastValueFrom(this.api.initiateACH({
+          fromAccount:   fromAccountId,
+          toAccount:     payee.accountNumber,
+          recipientName: payee.fullName,
+          routingNumber: payee.routingNumber,
+          amount,
+          memo: `Quick Pay via Maya to ${payee.nickname}`,
+        }));
+        ref = res?.transaction?.referenceNumber ?? 'ACH-REF';
+      }
+
+      this.payeeSvc.recordPayment(payee.id, amount);
+      this.quickPayPending.set(null);
+      this.quickPayExecuting.set(false);
+
+      const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+      const eta = payee.transferType === 'wire' ? 'same-day (before 4PM CT)' : '1–3 business days';
+      this.addAssistantMessage(
+        `✅ **Payment Confirmed!**\n\n` +
+        `💸 **${fmt}** sent to **${payee.nickname}**\n` +
+        `🏦 ${payee.bankName} · ${PayeeService.masked(payee.accountNumber)}\n` +
+        `📋 Reference: **${ref}**\n` +
+        `⏱ Expected: ${eta}\n\n` +
+        `_You'll receive an email confirmation shortly. 🛡️_`
+      );
+    } catch (err: any) {
+      this.quickPayExecuting.set(false);
+      this.addAssistantMessage(
+        `⚠️ Payment failed: ${err?.error?.message ?? 'Please try again or use the Quick Pay page.'}`
+      );
+    }
+  }
+
+  /** Cancel the pending quick-pay from the confirm widget. */
+  cancelQuickPay(): void {
+    this.quickPayPending.set(null);
+    this.quickPayExecuting.set(false);
+    this.addAssistantMessage(
+      `Payment cancelled. Your account has not been charged.\n\n` +
+      `Say _"send $X to [payee name]"_ anytime to try again!`
+    );
+  }
+
+  /** Intercepts user text replies while quick-pay confirm is on screen. */
+  private handleQuickPayResponse(msg: string): boolean {
+    if (!this.quickPayPending() || this.quickPayExecuting()) return false;
+    const lower = msg.toLowerCase().trim();
+
+    if (/^(cancel|stop|no|nope|abort|never\s*mind)$/.test(lower)) {
+      this.cancelQuickPay();
+      return true;
+    }
+    if (/\b(yes|confirm|ok|sure|go\s*ahead|proceed|yep|yeah|do\s*it|send\s*it|execute)\b/.test(lower)) {
+      // Find the confirm widget message and trigger execute
+      const confirmMsg = this.messages().find(m => m.type === 'quick-pay-confirm' && m.quickPay);
+      if (confirmMsg) this.executeQuickPay(confirmMsg);
+      return true;
+    }
+    return false;
+  }
+
+  /** Template helper — format currency */
+  formatCurrency(n: number): string {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+  }
+
+  /** Template helper — masked account number */
+  maskedAccount(num: string): string {
+    return PayeeService.masked(num);
+  }
+
+  /** Template helper — payee initials */
+  payeeInitials(nickname: string): string {
+    return PayeeService.initials(nickname);
+  }
+
+  /** Template helper — transfer type label */
+  transferLabel(t: 'wire' | 'ach'): string {
+    return PayeeService.transferLabel(t);
   }
 
   private addAssistantMessage(content: string): void {

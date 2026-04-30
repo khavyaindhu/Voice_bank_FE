@@ -17,6 +17,7 @@ const NAV_INTENTS: { patterns: RegExp[]; route: string; label: string }[] = [
   { patterns: [/history|past\s*trans/i], route: '/payments/history', label: 'Payment History' },
   { patterns: [/dashboard|go\s*home|home\s*page/i], route: '/dashboard', label: 'Dashboard' },
   { patterns: [/accounts?\s*page|my\s*account|go.*account/i], route: '/accounts', label: 'Accounts' },
+  { patterns: [/quick\s*pay|payees?\s*page|saved.*pay|my\s*payees?|go.*payee/i], route: '/payees', label: 'Quick Pay' },
   { patterns: [/cards?\s*page|my\s*card|go.*card(?!.*pay)/i], route: '/cards', label: 'Cards' },
   { patterns: [/loans?\s*page|my\s*loan|go.*loan(?!.*apply)/i], route: '/loans', label: 'Loans' },
   { patterns: [/apply.*loan|loan.*apply/i], route: '/loans/apply', label: 'Loan Application' },
@@ -146,9 +147,28 @@ const INTENTS: { patterns: RegExp[]; response: (ctx: string, accounts?: Account[
     response: () => `Your **Transaction History** is under **Payments → History**.\nFilter by type (ACH/Wire/Zelle), date range, and status.`,
   },
   {
+    patterns: [/quick\s*pay|saved\s*pay|my\s*payees?|send.*to\s+\w|pay.*\w+\s+\$\d/i],
+    response: () =>
+      `**Quick Pay** lets you send money to saved payees in 2 steps — no form filling! 🚀\n\n` +
+      `**Voice commands Maya understands:**\n` +
+      `- _"Send $500 to Mom"_\n` +
+      `- _"Pay ABC Vendors $10,000"_\n` +
+      `- _"Transfer $2,200 to Metro Properties"_\n\n` +
+      `**First time?** Go to **Quick Pay** in the sidebar to add a payee with their bank details. After that, one voice command does everything.\n\n` +
+      `💡 Say *"Go to Quick Pay"* to manage your saved payees.`,
+  },
+  {
     patterns: [/help|what\s*can\s*you|features/i],
     response: (screen) =>
-      `I'm **Maya** 🤖 Here's what I can do:\n\n💸 **Payments:** ACH · Wire · Zelle · Card\n💰 **Balances:** Checking · Savings · Credit · RD\n🏦 **Loans:** Home · Auto · Personal guidance\n💳 **Cards:** Details · Rewards · Freeze\n🧭 **Navigate:** *"Go to Wire Transfer"*\n📋 **Fill forms:** *"Fill form for me"*\n\n📍 Currently on: **${getScreenLabel(screen)}**`,
+      `I'm **Maya** 🤖 Here's what I can do:\n\n` +
+      `⚡ **Quick Pay:** *"Send $500 to Mom"* — 11 steps → 2 voice commands\n` +
+      `💸 **Payments:** ACH · Wire · Zelle · Card\n` +
+      `💰 **Balances:** Checking · Savings · Credit · RD\n` +
+      `🏦 **Loans:** Home · Auto · Personal guidance\n` +
+      `💳 **Cards:** Details · Rewards · Freeze · Emergency\n` +
+      `🧭 **Navigate:** *"Go to Wire Transfer"*\n` +
+      `📋 **Fill forms:** *"Fill form for me"*\n\n` +
+      `📍 Currently on: **${getScreenLabel(screen)}**`,
   },
 ];
 
@@ -201,7 +221,8 @@ function getScreenLabel(screen: string): string {
     'dashboard': 'Dashboard', 'payments/ach': 'ACH Transfer',
     'payments/wire': 'Wire Transfer', 'payments/zelle': 'Zelle',
     'payments/card': 'Card Payment', 'payments/history': 'Transaction History',
-    'accounts': 'Accounts', 'cards': 'Cards', 'loans': 'Loans', 'loans/apply': 'Loan Application',
+    'accounts': 'Accounts', 'payees': 'Quick Pay', 'cards': 'Cards',
+    'loans': 'Loans', 'loans/apply': 'Loan Application',
   };
   return map[screen] ?? screen;
 }

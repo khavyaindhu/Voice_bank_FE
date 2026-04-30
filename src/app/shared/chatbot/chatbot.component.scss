@@ -618,3 +618,147 @@
   font-size: 12px;
   font-weight: 500;
 }
+
+// ── Quick Pay Confirm Widget ──────────────────────────────────────────────────
+.qp-widget {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #002E6D;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0,46,109,.12);
+}
+
+.qp-payee-row {
+  background: linear-gradient(135deg, #002E6D 0%, #1A4A8A 100%);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+}
+
+.qp-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: white;
+  flex-shrink: 0;
+  letter-spacing: .5px;
+}
+
+.qp-payee-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.qp-payee-name {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qp-payee-bank {
+  font-size: 11px;
+  opacity: .78;
+  margin-top: 2px;
+}
+
+.qp-amount {
+  font-size: 20px;
+  font-weight: 800;
+  color: #FFD700;
+  flex-shrink: 0;
+  letter-spacing: -.5px;
+}
+
+.qp-details {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #F8FAFF;
+  border-bottom: 1px solid #E0E7F3;
+}
+
+.qp-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.qp-detail-label {
+  color: #6B7280;
+  font-weight: 600;
+}
+
+.qp-detail-val {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #111827;
+  font-weight: 600;
+}
+
+.qp-tx-icon {
+  font-size: 14px;
+  color: #002E6D;
+}
+
+.qp-footer {
+  padding: 10px 14px 14px;
+  display: flex;
+  gap: 8px;
+}
+
+.qp-btn-confirm {
+  flex: 1;
+  background: linear-gradient(135deg, #002E6D, #1A4A8A);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  transition: opacity .2s;
+  .material-icons { font-size: 15px; }
+  &:hover { opacity: .88; }
+}
+
+.qp-btn-cancel {
+  background: #fff;
+  border: 1.5px solid #E5E7EB;
+  color: #9CA3AF;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .18s;
+  &:hover { border-color: var(--usb-red); color: var(--usb-red); }
+}
+
+.qp-executing {
+  padding: 10px 14px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #1D4ED8;
+  font-size: 12px;
+  font-weight: 500;
+}
