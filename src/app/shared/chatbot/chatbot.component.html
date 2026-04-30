@@ -113,7 +113,7 @@
                         </button>
                         <button class="ec-btn-sel"
                                 (click)="executeSelected()"
-                                [disabled]="emergencyActions().every(a => !a.selected)">
+                                [disabled]="noActionsSelected">
                           Execute Selected
                         </button>
                         <button class="ec-btn-cancel" (click)="sendMessage('cancel')">Cancel</button>

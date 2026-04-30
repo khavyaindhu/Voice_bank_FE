@@ -72,6 +72,11 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   emergencyExecuting   = signal(false);
   emergencyActions     = signal<EmergencyAction[]>([]);
 
+  /** True when no action card is selected — used to disable the "Execute Selected" button. */
+  get noActionsSelected(): boolean {
+    return this.emergencyActions().every(a => !a.selected);
+  }
+
   private shouldScrollToBottom = false;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private recognition: any = null;
