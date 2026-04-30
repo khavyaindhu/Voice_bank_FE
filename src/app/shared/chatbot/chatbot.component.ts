@@ -595,9 +595,13 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   private scrollToBottom(): void {
-    try {
-      const el = this.messagesContainer?.nativeElement;
-      if (el) el.scrollTop = el.scrollHeight;
-    } catch {}
+    // rAF waits for the browser layout pass to complete so scrollHeight is
+    // the true value (important for tall widgets like the emergency card).
+    requestAnimationFrame(() => {
+      try {
+        const el = this.messagesContainer?.nativeElement;
+        if (el) el.scrollTop = el.scrollHeight;
+      } catch {}
+    });
   }
 }

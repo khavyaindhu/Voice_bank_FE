@@ -42,7 +42,9 @@
       <!-- Messages -->
       <div class="messages" #messagesContainer>
         @for (msg of messages(); track msg.timestamp) {
-          <div class="message-row" [class.user]="msg.role === 'user'">
+          <div class="message-row"
+               [class.user]="msg.role === 'user'"
+               [class.emergency-row]="msg.type === 'emergency-options'">
             @if (msg.role === 'assistant') {
               <div class="msg-avatar"><span class="material-icons">smart_toy</span></div>
             }
@@ -56,6 +58,7 @@
 
                 @if (msg.type === 'emergency-options') {
                   <!-- ── Emergency Card Response Widget ─────────────────── -->
+                  @let ecActions = emergencyActions();
                   <div class="ec-widget">
 
                     <!-- Header -->
@@ -69,7 +72,7 @@
 
                     <!-- Action cards -->
                     <div class="ec-actions">
-                      @for (action of emergencyActions(); track action.id) {
+                      @for (action of ecActions; track action.id) {
                         <div class="ec-action"
                              [class.ec-selected]="action.selected"
                              [class.ec-done]="action.status === 'done'"

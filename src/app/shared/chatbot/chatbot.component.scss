@@ -46,8 +46,8 @@
   bottom: 90px;
   right: 28px;
   z-index: 999;
-  width: 400px;
-  max-height: 620px;
+  width: 420px;
+  max-height: 700px;
   background: white;
   border-radius: 16px;
   box-shadow: 0 12px 48px rgba(0,0,0,.18);
@@ -152,7 +152,7 @@
   flex-direction: column;
   gap: 12px;
   min-height: 200px;
-  max-height: 360px;
+  max-height: 460px;
 }
 
 .message-row {
@@ -160,6 +160,8 @@
   align-items: flex-end;
   gap: 8px;
   &.user { flex-direction: row-reverse; }
+  // Emergency widget is tall — align to top so it doesn't fight height calc
+  &.emergency-row { align-items: flex-start; }
 }
 
 .msg-avatar {
@@ -412,6 +414,9 @@
   box-shadow: none !important;
   border: none !important;
   max-width: 100% !important;
+  // MUST be explicit width so ec-widget's width:100% has a concrete reference
+  width: 100% !important;
+  align-self: stretch;
 }
 
 // ── Emergency Card Response Widget ────────────────────────────────────
