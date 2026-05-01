@@ -1,0 +1,87 @@
+<div class="login-page">
+  <div class="login-left">
+    <div class="brand-block">
+      <div class="brand-logo">
+        <span class="brand-us">U.S.</span>
+        <span class="brand-bank">Bank</span>
+      </div>
+      <p class="brand-tagline">The power of possible</p>
+    </div>
+    <div class="promo">
+      <h2>Start banking smarter today</h2>
+      <p>Join our AI-powered banking portal and experience instant voice-driven assistance for all your banking needs.</p>
+      <div class="feature-list">
+        <div class="feature"><span class="material-icons">smart_toy</span> AI chatbot with context awareness</div>
+        <div class="feature"><span class="material-icons">mic</span> Voice-enabled assistance</div>
+        <div class="feature"><span class="material-icons">payments</span> Guided payment workflows</div>
+        <div class="feature"><span class="material-icons">security</span> Secure &amp; private</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="login-right">
+    <div class="login-card">
+      <h2>Enroll in Online Banking</h2>
+      <p class="subtitle">Create your account to get started.</p>
+
+      @if (error()) {
+        <div class="error-banner">
+          <span class="material-icons">error_outline</span>
+          {{ error() }}
+        </div>
+      }
+
+      <form (ngSubmit)="onSubmit()" #regForm="ngForm">
+        <div class="field-group">
+          <label for="fullName">Full Name</label>
+          <input id="fullName" type="text" [(ngModel)]="fullName" name="fullName"
+                 placeholder="Enter your full name" [disabled]="loading()" />
+        </div>
+
+        <div class="field-group">
+          <label for="email">Email Address</label>
+          <input id="email" type="email" [(ngModel)]="email" name="email"
+                 placeholder="Enter your email" [disabled]="loading()" />
+        </div>
+
+        <div class="field-group">
+          <label for="username">Choose Online ID</label>
+          <input id="username" type="text" [(ngModel)]="username" name="username"
+                 placeholder="Choose a unique Online ID" [disabled]="loading()" />
+        </div>
+
+        <div class="field-group">
+          <label for="password">Password</label>
+          <div class="password-wrap">
+            <input id="password" [type]="showPassword() ? 'text' : 'password'"
+                   [(ngModel)]="password" name="password"
+                   placeholder="Min. 6 characters" [disabled]="loading()" />
+            <button type="button" class="show-pwd" (click)="toggleShowPassword()">
+              <span class="material-icons">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input id="confirmPassword" type="password" [(ngModel)]="confirmPassword"
+                 name="confirmPassword" placeholder="Re-enter your password"
+                 [disabled]="loading()"
+                 [class.input-error]="confirmPassword && password !== confirmPassword" />
+          @if (confirmPassword && password !== confirmPassword) {
+            <span class="field-error">Passwords do not match</span>
+          }
+        </div>
+
+        <button type="submit" class="btn-login" [disabled]="loading() || !valid">
+          @if (loading()) { <span class="spinner"></span> Creating account... }
+          @else { Enroll Now }
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <a routerLink="/login">Already enrolled? Sign In</a>
+      </div>
+    </div>
+  </div>
+</div>
