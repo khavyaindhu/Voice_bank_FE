@@ -1,6 +1,7 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { StaffContextService } from '../../../core/services/staff-context.service';
 
 interface Customer {
   id: string;
@@ -20,9 +21,25 @@ interface Customer {
   templateUrl: './customer-search.component.html',
   styleUrl: './customer-search.component.scss',
 })
-export class CustomerSearchComponent {
+export class CustomerSearchComponent implements OnInit {
+  private staffCtx = inject(StaffContextService);
+
   searchQ  = signal('');
   selected = signal<Customer | null>(null);
+
+  ngOnInit(): void {
+    const q = this.staffCtx.customerQuery();
+    if (q) {
+      this.searchQ.set(q);
+      // Auto-select first match
+      const match = this.customers.find(c =>
+        c.name.toLowerCase().includes(q.toLowerCase()) ||
+        c.id.toLowerCase().includes(q.toLowerCase())
+      );
+      if (match) this.selected.set(match);
+      this.staffCtx.setCustomerSearch(''); // clear after consuming
+    }
+  }
 
   readonly customers: Customer[] = [
     {

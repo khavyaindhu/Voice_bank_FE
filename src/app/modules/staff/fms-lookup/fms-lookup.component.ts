@@ -1,6 +1,7 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { StaffContextService } from '../../../core/services/staff-context.service';
 
 interface FmsAccount {
   accountNo: string;
@@ -27,13 +28,41 @@ interface FmsTransaction {
   templateUrl: './fms-lookup.component.html',
   styleUrl: './fms-lookup.component.scss',
 })
-export class FmsLookupComponent {
+export class FmsLookupComponent implements OnInit {
+  private staffCtx = inject(StaffContextService);
+
   searchQ       = signal('');
   selected      = signal<FmsAccount | null>(null);
   dateFrom      = signal('2026-01-01');
   dateTo        = signal('2026-04-30');
   txLoading     = signal(false);
   showTx        = signal(false);
+
+  ngOnInit(): void {
+    // If Maya navigated here with a pre-filled search, apply it
+    const q = this.staffCtx.fmsQuery();
+    if (q) {
+      this.searchQ.set(q);
+      // Auto-select first match
+      const match = this.accounts.find(a =>
+        a.description.toLowerCase().includes(q.toLowerCase()) ||
+        a.accountNo.includes(q)
+      );
+      if (match) {
+        this.selected.set(match);
+        const preset = this.staffCtx.fmsAutoLoad();
+        if (preset) { this.applyPreset(preset); }
+      }
+      this.staffCtx.setFmsSearch(''); // clear after consuming
+    }
+  }
+
+  applyPreset(preset: 'current' | 'previous' | 'ytd' | ''): void {
+    if (preset === 'current')  { this.dateFrom.set('2026-04-01'); this.dateTo.set('2026-04-30'); }
+    if (preset === 'previous') { this.dateFrom.set('2026-03-01'); this.dateTo.set('2026-03-31'); }
+    if (preset === 'ytd')      { this.dateFrom.set('2026-01-01'); this.dateTo.set('2026-04-30'); }
+    if (preset) { this.loadTransactions(); }
+  }
 
   readonly accounts: FmsAccount[] = [
     { accountNo: '91000013', deptNo: '6',        description: 'Swarangi Test',              status: 'active',   balance: 0 },

@@ -13,6 +13,7 @@ import { GuidedFlowService, FlowStep } from '../../core/services/guided-flow.ser
 import { LocalChatService } from '../../core/services/local-chat.service';
 import { EmergencyCardService } from '../../core/services/emergency-card.service';
 import { PayeeService, Payee } from '../../core/services/payee.service';
+import { StaffContextService } from '../../core/services/staff-context.service';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -94,9 +95,9 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private recognition: any = null;
   private synth = window.speechSynthesis;
 
-  quickActions: QuickAction[] = [
-    { label: '⚡ Send $500 to Mom',               prompt: 'Maya, send $500 to Mom' },
-    { label: '💸 Pay ABC Vendors $10,000',         prompt: 'Maya, send $10000 to ABC Vendors' },
+  readonly customerQuickActions: QuickAction[] = [
+    { label: '⚡ Send $500 to Father',             prompt: 'Maya, send $500 to Father' },
+    { label: '💸 Pay Vijaya $10,000',              prompt: 'Maya, send $10000 to Vijaya' },
     { label: '🚨 Lost / Stolen Card',              prompt: 'Maya, I lost my card' },
     { label: '💳 How to make a Wire Transfer?',    prompt: 'How do I make a wire transfer?' },
     { label: '⚡ Send money via Zelle',             prompt: 'How do I send money with Zelle?' },
@@ -104,6 +105,21 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     { label: '💰 Check my balance',                prompt: 'What are my current account balances?' },
     { label: '📊 Loan EMI information',             prompt: 'What are my current loan details and EMI amount?' },
   ];
+
+  readonly staffQuickActions: QuickAction[] = [
+    { label: '🔍 Search customer Ramesh',          prompt: 'Search customer Ramesh' },
+    { label: '🔍 Find customer Vijaya',             prompt: 'Find customer Vijaya' },
+    { label: '📊 Show Agni test transactions',      prompt: 'Show Agni test transactions' },
+    { label: '📊 FMS Currency & Coin account',      prompt: 'Open Currency & Coin transactions' },
+    { label: '📊 Salary & Wages this month',        prompt: 'Show Salary & Wages transactions current month' },
+    { label: '🏠 Go to Staff Dashboard',            prompt: 'Go to staff dashboard' },
+    { label: '💳 Open Card Services',               prompt: 'Open card services' },
+    { label: '📈 Open Reports',                     prompt: 'Open reports' },
+  ];
+
+  get quickActions(): QuickAction[] {
+    return this.role === 'staff' ? this.staffQuickActions : this.customerQuickActions;
+  }
 
   screenLabel = computed(() => {
     const labels: Record<string, string> = {
@@ -139,6 +155,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     private localChat: LocalChatService,
     public emergencyCard: EmergencyCardService,
     public payeeSvc: PayeeService,
+    private staffCtx: StaffContextService,
   ) {}
 
   ngOnInit(): void {
@@ -315,6 +332,9 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       return;
     }
 
+    // ── Staff intents: navigate + pre-fill staff screens ────────────
+    if (this.role === 'staff' && this.handleStaffIntent(msg)) return;
+
     // ── Quick Pay: intercept active-flow replies ─────────────────────
     if (this.handleQuickPayResponse(msg)) return;
 
@@ -423,6 +443,96 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       type:        'emergency-options' as const,
     }]);
     this.shouldScrollToBottom = true;
+  }
+
+  // ── Staff Intent Detection ───────────────────────────────────────────────
+
+  /**
+   * Handles staff-mode voice/text commands that navigate to staff pages
+   * and pre-fill the search context via StaffContextService.
+   * Returns true if the message was handled (caller should return early).
+   */
+  private handleStaffIntent(msg: string): boolean {
+    const lower = msg.toLowerCase().trim();
+
+    // ── Customer Search ──────────────────────────────────────────────
+    // Patterns: "search customer Ramesh", "find customer Vijaya", "look up Kavya", "show me customer CUST-001"
+    const custRx = /(?:search|find|look\s*up|open|show(?:\s+me)?)\s+(?:customer\s+)?([a-z0-9 .'-]+?)(?:\s+(?:customer|account|profile|details?))?$/i;
+    const custMatch = lower.match(custRx);
+    if (custMatch && (
+      /customer|client|cust/i.test(lower) ||
+      /^(?:search|find|look\s*up)\s+[a-z]/i.test(lower)
+    )) {
+      const name = custMatch[1].trim();
+      this.staffCtx.setCustomerSearch(name);
+      this.addAssistantMessage(
+        `🔍 Searching for customer **"${name}"**...\n\nNavigating to Customer Search and pre-filling the query.`
+      );
+      setTimeout(() => this.router.navigate(['/staff/customers']), 800);
+      return true;
+    }
+
+    // ── FMS Account / Transactions ───────────────────────────────────
+    // Patterns: "show Agni test transactions", "open FMS account 91000038",
+    //           "show current month transactions for Currency", "load Agni transactions for March"
+    const fmsRx = /(?:show|open|find|get|load|pull\s*up)\s+(?:fms\s+(?:account\s+)?)?(.+?)\s+(?:transactions?|account|ledger|entries)/i;
+    const fmsMatch = msg.match(fmsRx);
+    if ((fmsMatch || /fms|ledger|account\s+\d{8}/i.test(lower)) && !/customer|client/i.test(lower)) {
+      let searchTerm = '';
+      if (fmsMatch) {
+        searchTerm = fmsMatch[1].trim();
+      } else {
+        // "open FMS account 91000038" — extract account number or keyword
+        const numMatch = lower.match(/\b(91\d{6})\b/);
+        const keyMatch = lower.match(/(?:fms\s+(?:account\s+)?|account\s+)([a-z0-9 &]+)/i);
+        searchTerm = numMatch?.[1] ?? keyMatch?.[1]?.trim() ?? '';
+      }
+
+      // Detect date preset from the message
+      let preset: 'current' | 'previous' | 'ytd' | '' = '';
+      if (/current\s*month|this\s*month|april/i.test(lower))  preset = 'current';
+      else if (/last\s*month|previous\s*month|march/i.test(lower)) preset = 'previous';
+      else if (/ytd|year\s*to\s*date|this\s*year/i.test(lower))   preset = 'ytd';
+      else if (/transact|history|ledger/i.test(lower))             preset = 'current'; // default to current month
+
+      this.staffCtx.setFmsSearch(searchTerm, preset);
+
+      const presetLabel = preset === 'current' ? ' (current month)' :
+                          preset === 'previous' ? ' (previous month)' :
+                          preset === 'ytd'     ? ' (year-to-date)'   : '';
+
+      this.addAssistantMessage(
+        `📊 Opening FMS Account Lookup for **"${searchTerm}"**${presetLabel}...\n\nNavigating and loading transactions.`
+      );
+      setTimeout(() => this.router.navigate(['/staff/fms']), 800);
+      return true;
+    }
+
+    // ── Staff Dashboard ──────────────────────────────────────────────
+    if (/(?:go\s+to|open|show)\s+(?:staff\s+)?dashboard/i.test(lower) ||
+        /staff\s+(?:home|main|overview)/i.test(lower)) {
+      this.addAssistantMessage(`🏠 Navigating to **Staff Dashboard**...`);
+      setTimeout(() => this.router.navigate(['/staff/dashboard']), 500);
+      return true;
+    }
+
+    // ── Card Services ────────────────────────────────────────────────
+    if (/(?:go\s+to|open|show)\s+card\s+services?/i.test(lower) ||
+        /card\s+(?:management|admin|lookup)/i.test(lower)) {
+      this.addAssistantMessage(`💳 Navigating to **Card Services**...`);
+      setTimeout(() => this.router.navigate(['/staff/cards']), 500);
+      return true;
+    }
+
+    // ── Reports ──────────────────────────────────────────────────────
+    if (/(?:go\s+to|open|show)\s+reports?/i.test(lower) ||
+        /staff\s+reports?/i.test(lower)) {
+      this.addAssistantMessage(`📈 Navigating to **Reports**...`);
+      setTimeout(() => this.router.navigate(['/staff/reports']), 500);
+      return true;
+    }
+
+    return false;
   }
 
   /** Toggle an individual action card on/off. */
