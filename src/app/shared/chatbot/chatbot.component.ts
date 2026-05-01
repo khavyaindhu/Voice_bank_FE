@@ -609,7 +609,23 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (!qp || this.quickPayExecuting()) return;
     this.quickPayExecuting.set(true);
 
-    const { payee, amount, fromAccountId } = qp;
+    const { payee, amount } = qp;
+
+    // Ensure we always have a valid fromAccountId — re-fetch if needed
+    let fromAccountId = qp.fromAccountId;
+    if (!fromAccountId) {
+      try {
+        const accs = await lastValueFrom(this.api.getAccounts());
+        this.accounts.set(accs);
+        fromAccountId = accs.find(a => a.type === 'checking' || a.type === 'savings')?._id ?? '';
+      } catch { /* will fail below with clear error */ }
+    }
+
+    if (!fromAccountId) {
+      this.quickPayExecuting.set(false);
+      this.addAssistantMessage('❌ No checking/savings account found to send from. Please check your accounts.');
+      return;
+    }
 
     try {
       let ref = '';
