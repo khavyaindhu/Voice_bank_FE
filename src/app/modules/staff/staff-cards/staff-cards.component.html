@@ -93,10 +93,10 @@
             <tr [class.selected]="selected()?._id === c._id" (click)="selectCard(c)">
               <td>
                 <div class="cust-cell">
-                  <div class="avatar">{{ c.customerName[0] }}</div>
+                  <div class="avatar">{{ c.customerName?.[0] ?? '?' }}</div>
                   <div>
-                    <div class="cust-name">{{ c.customerName }}</div>
-                    <div class="cust-id">{{ c.customerDisplayId }}</div>
+                    <div class="cust-name">{{ c.customerName ?? '—' }}</div>
+                    <div class="cust-id">{{ c.customerDisplayId ?? '' }}</div>
                   </div>
                 </div>
               </td>
