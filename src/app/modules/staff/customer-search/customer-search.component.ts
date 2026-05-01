@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StaffContextService } from '../../../core/services/staff-context.service';
@@ -27,19 +27,23 @@ export class CustomerSearchComponent implements OnInit {
   searchQ  = signal('');
   selected = signal<Customer | null>(null);
 
-  ngOnInit(): void {
-    const q = this.staffCtx.customerQuery();
-    if (q) {
+  constructor() {
+    // Reactively respond to Maya setting a new customer query —
+    // works even when the component is already mounted (same-route navigation)
+    effect(() => {
+      const q = this.staffCtx.customerQuery();
+      if (!q) return;
       this.searchQ.set(q);
-      // Auto-select first match
       const match = this.customers.find(c =>
         c.name.toLowerCase().includes(q.toLowerCase()) ||
         c.id.toLowerCase().includes(q.toLowerCase())
       );
       if (match) this.selected.set(match);
       this.staffCtx.setCustomerSearch(''); // clear after consuming
-    }
+    });
   }
+
+  ngOnInit(): void {}
 
   readonly customers: Customer[] = [
     {

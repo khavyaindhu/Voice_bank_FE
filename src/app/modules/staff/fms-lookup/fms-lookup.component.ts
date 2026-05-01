@@ -38,24 +38,28 @@ export class FmsLookupComponent implements OnInit {
   txLoading     = signal(false);
   showTx        = signal(false);
 
-  ngOnInit(): void {
-    // If Maya navigated here with a pre-filled search, apply it
-    const q = this.staffCtx.fmsQuery();
-    if (q) {
+  constructor() {
+    // Reactively respond to Maya setting a new FMS query —
+    // works even when the component is already mounted (same-route navigation)
+    effect(() => {
+      const q = this.staffCtx.fmsQuery();
+      if (!q) return;
       this.searchQ.set(q);
-      // Auto-select first match
       const match = this.accounts.find(a =>
         a.description.toLowerCase().includes(q.toLowerCase()) ||
         a.accountNo.includes(q)
       );
       if (match) {
         this.selected.set(match);
+        this.showTx.set(false);
         const preset = this.staffCtx.fmsAutoLoad();
         if (preset) { this.applyPreset(preset); }
       }
       this.staffCtx.setFmsSearch(''); // clear after consuming
-    }
+    });
   }
+
+  ngOnInit(): void {}
 
   applyPreset(preset: 'current' | 'previous' | 'ytd' | ''): void {
     if (preset === 'current')  { this.dateFrom.set('2026-04-01'); this.dateTo.set('2026-04-30'); }
