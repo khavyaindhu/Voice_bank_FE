@@ -66,6 +66,49 @@ export class ApiService {
     return this.http.post<ChatResponse>(`${this.base}/chat/message`, payload);
   }
 
+  // ── Staff: Cards ────────────────────────────────────────────────────────
+  getStaffCards(filters?: { status?: string; customerId?: string; search?: string }): Observable<StaffCard[]> {
+    let params = new HttpParams();
+    if (filters?.status)     params = params.set('status',     filters.status);
+    if (filters?.customerId) params = params.set('customerId', filters.customerId);
+    if (filters?.search)     params = params.set('search',     filters.search);
+    return this.http.get<StaffCard[]>(`${this.base}/staff/cards`, { params });
+  }
+  staffToggleFreeze(id: string): Observable<{ card: StaffCard }> {
+    return this.http.patch<{ card: StaffCard }>(`${this.base}/staff/cards/${id}/freeze`, {});
+  }
+
+  // ── Staff: Reports ───────────────────────────────────────────────────────
+  getReportTransactions(params: ReportParams): Observable<ReportTxPage> {
+    let p = new HttpParams();
+    if (params.preset)      p = p.set('preset',      params.preset);
+    if (params.from)        p = p.set('from',         params.from);
+    if (params.to)          p = p.set('to',           params.to);
+    if (params.customerId)  p = p.set('customerId',   params.customerId);
+    if (params.category)    p = p.set('category',     params.category);
+    if (params.entryType)   p = p.set('entryType',    params.entryType);
+    if (params.page)        p = p.set('page',         params.page);
+    if (params.limit)       p = p.set('limit',        params.limit);
+    return this.http.get<ReportTxPage>(`${this.base}/staff/reports/transactions`, { params: p });
+  }
+  getReportSummary(params: ReportParams): Observable<ReportSummary> {
+    let p = new HttpParams();
+    if (params.preset) p = p.set('preset', params.preset);
+    if (params.from)   p = p.set('from',   params.from);
+    if (params.to)     p = p.set('to',     params.to);
+    return this.http.get<ReportSummary>(`${this.base}/staff/reports/summary`, { params: p });
+  }
+  getReportDepartments(params: ReportParams): Observable<ReportDeptPage> {
+    let p = new HttpParams();
+    if (params.preset) p = p.set('preset', params.preset);
+    if (params.from)   p = p.set('from',   params.from);
+    if (params.to)     p = p.set('to',     params.to);
+    return this.http.get<ReportDeptPage>(`${this.base}/staff/reports/departments`, { params: p });
+  }
+  getReportCustomers(): Observable<{ displayId: string; name: string }[]> {
+    return this.http.get<{ displayId: string; name: string }[]>(`${this.base}/staff/reports/customers`);
+  }
+
   // Payees
   getPayees(): Observable<ApiPayee[]> {
     return this.http.get<ApiPayee[]>(`${this.base}/payees`);
@@ -185,4 +228,92 @@ export interface CreatePayeePayload {
   accountType: 'checking' | 'savings';
   transferType: 'wire' | 'ach';
   category: 'business' | 'personal' | 'family' | 'utility';
+}
+
+// ── Staff types ──────────────────────────────────────────────────────────────
+
+export interface StaffCard {
+  _id:               string;
+  customerDisplayId: string;
+  customerName:      string;
+  cardType:          'credit' | 'debit';
+  network:           'Visa' | 'Mastercard';
+  maskedNumber:      string;
+  cardholderName:    string;
+  expiryDate:        string;
+  creditLimit?:      number;
+  currentBalance:    number;
+  status:            'active' | 'frozen' | 'blocked' | 'disputed' | 'expiring';
+  disputes:          number;
+  rewardPoints?:     number;
+}
+
+export interface LedgerEntryApi {
+  _id:               string;
+  customerDisplayId: string;
+  customerName:      string;
+  accountNo:         string;
+  accountType:       string;
+  date:              string;
+  entryType:         'credit' | 'debit';
+  category:          string;
+  description:       string;
+  amount:            number;
+  runningBalance:    number;
+  ref:               string;
+}
+
+export interface ReportParams {
+  preset?:     string;
+  from?:       string;
+  to?:         string;
+  customerId?: string;
+  category?:   string;
+  entryType?:  string;
+  page?:       string;
+  limit?:      string;
+}
+
+export interface ReportTxPage {
+  entries:   LedgerEntryApi[];
+  total:     number;
+  page:      number;
+  pages:     number;
+  dateRange: { from: string; to: string };
+}
+
+export interface MonthSummaryApi {
+  month:   string;
+  credits: number;
+  debits:  number;
+  net:     number;
+  txCount: number;
+}
+
+export interface TopCustomerApi {
+  _id:          string;
+  customerName: string;
+  totalVolume:  number;
+  txCount:      number;
+  credits:      number;
+  debits:       number;
+}
+
+export interface ReportSummary {
+  monthlySummary: MonthSummaryApi[];
+  totals:         { totalCredits: number; totalDebits: number; txCount: number };
+  topCustomers:   TopCustomerApi[];
+  dateRange:      { from: string; to: string };
+}
+
+export interface DeptRowApi {
+  _id:    string;
+  credits: number;
+  debits:  number;
+  count:   number;
+}
+
+export interface ReportDeptPage {
+  departments: DeptRowApi[];
+  dateRange:   { from: string; to: string };
 }

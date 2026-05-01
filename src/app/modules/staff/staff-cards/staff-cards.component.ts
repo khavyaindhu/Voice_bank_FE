@@ -1,24 +1,9 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ApiService, StaffCard } from '../../../core/services/api.service';
 
-type CardStatus = 'active' | 'frozen' | 'disputed' | 'expiring';
-type CardType   = 'Debit' | 'Credit';
-type FilterTab  = 'all' | CardStatus;
-
-interface CardRecord {
-  id:         string;
-  customer:   string;
-  customerId: string;
-  type:       CardType;
-  network:    'Visa' | 'Mastercard';
-  masked:     string;
-  status:     CardStatus;
-  expiry:     string;
-  issuedDate: string;
-  disputes:   number;
-  lastUsed:   string;
-}
+type FilterTab = 'all' | 'active' | 'frozen' | 'disputed' | 'expiring';
 
 @Component({
   selector: 'app-staff-cards',
@@ -27,68 +12,16 @@ interface CardRecord {
   templateUrl: './staff-cards.component.html',
   styleUrl: './staff-cards.component.scss',
 })
-export class StaffCardsComponent {
+export class StaffCardsComponent implements OnInit {
+  private api = inject(ApiService);
 
-  searchQ   = signal('');
+  cards    = signal<StaffCard[]>([]);
+  loading  = signal(true);
+  error    = signal('');
+  searchQ  = signal('');
   activeTab = signal<FilterTab>('all');
-  selected  = signal<CardRecord | null>(null);
-
-  readonly cards: CardRecord[] = [
-    {
-      id: 'CRD-001', customer: 'Vijaya Krishnamurthy', customerId: 'CUST-001',
-      type: 'Debit',  network: 'Visa',       masked: '****1230',
-      status: 'active',   expiry: '2027-08', issuedDate: '2021-08-01',
-      disputes: 0, lastUsed: '2026-04-29',
-    },
-    {
-      id: 'CRD-002', customer: 'Vijaya Krishnamurthy', customerId: 'CUST-001',
-      type: 'Credit', network: 'Visa',       masked: '****4421',
-      status: 'disputed', expiry: '2026-06', issuedDate: '2020-06-15',
-      disputes: 2, lastUsed: '2026-04-18',
-    },
-    {
-      id: 'CRD-003', customer: 'Ramesh Venkataraman', customerId: 'CUST-002',
-      type: 'Debit',  network: 'Mastercard', masked: '****9210',
-      status: 'active',   expiry: '2028-03', issuedDate: '2022-03-10',
-      disputes: 0, lastUsed: '2026-04-28',
-    },
-    {
-      id: 'CRD-004', customer: 'Green Valley Properties LLC', customerId: 'CUST-003',
-      type: 'Debit',  network: 'Visa',       masked: '****2211',
-      status: 'active',   expiry: '2026-06', issuedDate: '2021-06-01',
-      disputes: 0, lastUsed: '2026-04-27',
-    },
-    {
-      id: 'CRD-005', customer: 'Green Valley Properties LLC', customerId: 'CUST-003',
-      type: 'Credit', network: 'Mastercard', masked: '****6670',
-      status: 'expiring',  expiry: '2026-06', issuedDate: '2021-06-01',
-      disputes: 0, lastUsed: '2026-04-10',
-    },
-    {
-      id: 'CRD-006', customer: 'Kavya Indhu Thiyagarajan', customerId: 'CUST-004',
-      type: 'Debit',  network: 'Visa',       masked: '****7712',
-      status: 'active',   expiry: '2028-11', issuedDate: '2022-11-20',
-      disputes: 0, lastUsed: '2026-04-30',
-    },
-    {
-      id: 'CRD-007', customer: 'ABC Vendors LLC', customerId: 'CUST-005',
-      type: 'Debit',  network: 'Mastercard', masked: '****9012',
-      status: 'frozen',   expiry: '2027-05', issuedDate: '2020-05-30',
-      disputes: 1, lastUsed: '2026-02-14',
-    },
-    {
-      id: 'CRD-008', customer: 'Nayana Rajan', customerId: 'CUST-006',
-      type: 'Debit',  network: 'Visa',       masked: '****5541',
-      status: 'active',   expiry: '2027-11', issuedDate: '2021-11-18',
-      disputes: 0, lastUsed: '2026-04-29',
-    },
-    {
-      id: 'CRD-009', customer: 'Nayana Rajan', customerId: 'CUST-006',
-      type: 'Credit', network: 'Mastercard', masked: '****8834',
-      status: 'expiring',  expiry: '2026-05', issuedDate: '2020-05-01',
-      disputes: 0, lastUsed: '2026-04-20',
-    },
-  ];
+  selected  = signal<StaffCard | null>(null);
+  togglingId = signal<string | null>(null);
 
   readonly tabs: { key: FilterTab; label: string }[] = [
     { key: 'all',      label: 'All Cards' },
@@ -98,52 +31,79 @@ export class StaffCardsComponent {
     { key: 'active',   label: 'Active' },
   ];
 
+  ngOnInit(): void {
+    this.loadCards();
+  }
+
+  loadCards(): void {
+    this.loading.set(true);
+    this.api.getStaffCards().subscribe({
+      next: cards => { this.cards.set(cards); this.loading.set(false); },
+      error: () => { this.error.set('Failed to load cards. Please try again.'); this.loading.set(false); },
+    });
+  }
+
   filtered = computed(() => {
     const q   = this.searchQ().toLowerCase().trim();
     const tab = this.activeTab();
-    return this.cards.filter(c => {
+    return this.cards().filter(c => {
       const matchTab = tab === 'all' || c.status === tab;
       const matchQ   = !q ||
-        c.customer.toLowerCase().includes(q) ||
-        c.masked.includes(q) ||
-        c.customerId.toLowerCase().includes(q) ||
-        c.type.toLowerCase().includes(q);
+        c.customerName.toLowerCase().includes(q) ||
+        c.maskedNumber.includes(q) ||
+        c.customerDisplayId.toLowerCase().includes(q) ||
+        c.cardType.toLowerCase().includes(q) ||
+        c.network.toLowerCase().includes(q);
       return matchTab && matchQ;
     });
   });
 
   get stats() {
+    const all = this.cards();
     return {
-      total:    this.cards.length,
-      frozen:   this.cards.filter(c => c.status === 'frozen').length,
-      disputed: this.cards.filter(c => c.status === 'disputed').length,
-      expiring: this.cards.filter(c => c.status === 'expiring').length,
+      total:    all.length,
+      frozen:   all.filter(c => c.status === 'frozen').length,
+      disputed: all.filter(c => c.status === 'disputed').length,
+      expiring: all.filter(c => c.status === 'expiring').length,
     };
   }
 
   countFor(tab: FilterTab): number {
-    if (tab === 'all') return this.cards.length;
-    return this.cards.filter(c => c.status === tab).length;
+    if (tab === 'all') return this.cards().length;
+    return this.cards().filter(c => c.status === tab).length;
   }
 
-  selectCard(c: CardRecord): void {
-    this.selected.set(this.selected()?.id === c.id ? null : c);
+  selectCard(c: StaffCard): void {
+    this.selected.set(this.selected()?._id === c._id ? null : c);
   }
 
-  toggleFreeze(c: CardRecord, event: Event): void {
-    event.stopPropagation();
-    c.status = c.status === 'frozen' ? 'active' : 'frozen';
+  toggleFreeze(c: StaffCard, event?: Event): void {
+    event?.stopPropagation();
+    this.togglingId.set(c._id);
+    this.api.staffToggleFreeze(c._id).subscribe({
+      next: ({ card }) => {
+        this.cards.update(list => list.map(x => x._id === card._id ? card : x));
+        // keep selected in sync
+        if (this.selected()?._id === card._id) this.selected.set(card);
+        this.togglingId.set(null);
+      },
+      error: () => this.togglingId.set(null),
+    });
   }
 
-  statusLabel(s: CardStatus): string {
+  statusLabel(s: string): string {
     return s === 'expiring' ? 'Expiring Soon' : s.charAt(0).toUpperCase() + s.slice(1);
-  }
-
-  networkIcon(n: 'Visa' | 'Mastercard'): string {
-    return n === 'Visa' ? '💳' : '🔵';
   }
 
   formatDate(d: string): string {
     return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  isExpiryWarn(expiry: string): boolean {
+    // expiryDate is MM/YY — warn if within 3 months
+    const [mm, yy] = expiry.split('/');
+    const exp = new Date(2000 + parseInt(yy), parseInt(mm) - 1, 1);
+    const cutoff = new Date(2026, 7, 1); // Aug 2026 = 3 months from May 2026
+    return exp <= cutoff;
   }
 }

@@ -2,6 +2,20 @@
   max-width: 1200px;
 }
 
+.state-msg {
+  display: flex; align-items: center; gap: 10px;
+  padding: 20px; background: white; border-radius: 10px;
+  border: 1px solid #E5E7EB; color: #6B7280; font-size: 14px;
+  margin-bottom: 16px;
+  .material-icons { color: #38BDF8; }
+  button { margin-left: auto; padding: 6px 14px; background: #0F3460; color: white;
+           border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  &.error .material-icons { color: #DC2626; }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; display: inline-block; }
+
 .page-header {
   display: flex;
   justify-content: space-between;

@@ -4,144 +4,274 @@
   <div class="page-header">
     <div>
       <h2><span class="material-icons">bar_chart</span> Reports</h2>
-      <p>Financial summaries, transaction exports and department-wise budget reports.</p>
+      <p>Financial summaries, transaction drill-downs and department-wise reports across all customers.</p>
     </div>
     <div class="header-hint">
       <span class="material-icons">record_voice_over</span>
-      Say "Maya, open reports"
+      Say "Maya, show last month's summary"
     </div>
+  </div>
+
+  <!-- Date range filter bar -->
+  <div class="filter-bar">
+    <div class="preset-chips">
+      <button *ngFor="let p of presets"
+        class="chip"
+        [class.active]="preset() === p.key"
+        (click)="preset.set(p.key); applyFilter()">
+        {{ p.label }}
+      </button>
+    </div>
+    <ng-container *ngIf="preset() === 'custom'">
+      <div class="custom-range">
+        <label>From</label>
+        <input type="date" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" />
+        <label>To</label>
+        <input type="date" [ngModel]="customTo()"   (ngModelChange)="customTo.set($event)"   />
+        <button class="apply-btn" (click)="applyFilter()">Apply</button>
+      </div>
+    </ng-container>
+    <span class="range-label" *ngIf="dateRangeLabel()">
+      <span class="material-icons">date_range</span> {{ dateRangeLabel() }}
+    </span>
   </div>
 
   <!-- Section nav -->
   <div class="section-nav">
-    <button [class.active]="activeSection() === 'overview'" (click)="activeSection.set('overview')">
+    <button [class.active]="activeSection() === 'overview'"      (click)="switchSection('overview')">
       <span class="material-icons">dashboard</span> Overview
     </button>
-    <button [class.active]="activeSection() === 'monthly'" (click)="activeSection.set('monthly')">
-      <span class="material-icons">calendar_month</span> Monthly Summary
+    <button [class.active]="activeSection() === 'transactions'"  (click)="switchSection('transactions')">
+      <span class="material-icons">receipt_long</span> Transactions
     </button>
-    <button [class.active]="activeSection() === 'dept'" (click)="activeSection.set('dept')">
-      <span class="material-icons">account_tree</span> By Department
+    <button [class.active]="activeSection() === 'departments'"   (click)="switchSection('departments')">
+      <span class="material-icons">account_tree</span> By Category
     </button>
-    <button [class.active]="activeSection() === 'exports'" (click)="activeSection.set('exports')">
+    <button [class.active]="activeSection() === 'exports'"       (click)="switchSection('exports')">
       <span class="material-icons">file_download</span> Export Reports
     </button>
   </div>
 
-  <!-- ══ OVERVIEW ═══════════════════════════════════════════════════ -->
+  <!-- ══ OVERVIEW ══════════════════════════════════════════════════════ -->
   <ng-container *ngIf="activeSection() === 'overview'">
 
-    <div class="kpi-row">
-      <div class="kpi-card">
-        <div class="kpi-icon credits"><span class="material-icons">trending_up</span></div>
-        <div>
-          <div class="kpi-value">{{ fmtK(ytdTotals.credits) }}</div>
-          <div class="kpi-label">YTD Total Credits</div>
-          <div class="kpi-sub">Jan – Apr 2026</div>
-        </div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon debits"><span class="material-icons">trending_down</span></div>
-        <div>
-          <div class="kpi-value">{{ fmtK(ytdTotals.debits) }}</div>
-          <div class="kpi-label">YTD Total Debits</div>
-          <div class="kpi-sub">Jan – Apr 2026</div>
-        </div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon net"><span class="material-icons">account_balance_wallet</span></div>
-        <div>
-          <div class="kpi-value">{{ fmtK(ytdTotals.net) }}</div>
-          <div class="kpi-label">Net Position (YTD)</div>
-          <div class="kpi-sub">Credits − Debits</div>
-        </div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon tx"><span class="material-icons">receipt_long</span></div>
-        <div>
-          <div class="kpi-value">{{ ytdTotals.txCount.toLocaleString() }}</div>
-          <div class="kpi-label">Total Transactions</div>
-          <div class="kpi-sub">Jan – Apr 2026</div>
-        </div>
-      </div>
+    <div *ngIf="summaryLoading()" class="loading-row">
+      <span class="material-icons spin">sync</span> Loading summary…
     </div>
 
-    <!-- Quick bar chart -->
-    <div class="chart-card">
-      <div class="chart-header">
-        <h3>Monthly Credit vs Debit Trend</h3>
-        <span class="chart-period">Jan – Apr 2026</span>
-      </div>
-      <div class="chart-body">
-        <div class="chart-row" *ngFor="let m of monthlySummary">
-          <div class="chart-label">{{ m.month.split(' ')[0] }}</div>
-          <div class="chart-bars">
-            <div class="bar-wrap">
-              <div class="bar credit" [style.width.%]="barWidth(m.credits, 'credit')"></div>
-              <span>{{ fmtK(m.credits) }}</span>
-            </div>
-            <div class="bar-wrap">
-              <div class="bar debit" [style.width.%]="barWidth(m.debits, 'debit')"></div>
-              <span>{{ fmtK(m.debits) }}</span>
-            </div>
+    <ng-container *ngIf="!summaryLoading()">
+      <!-- KPI cards -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-icon credits"><span class="material-icons">trending_up</span></div>
+          <div>
+            <div class="kpi-value">{{ fmtK(totals().totalCredits) }}</div>
+            <div class="kpi-label">Total Credits</div>
+            <div class="kpi-sub">{{ dateRangeLabel() }}</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon debits"><span class="material-icons">trending_down</span></div>
+          <div>
+            <div class="kpi-value">{{ fmtK(totals().totalDebits) }}</div>
+            <div class="kpi-label">Total Debits</div>
+            <div class="kpi-sub">{{ dateRangeLabel() }}</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon net"><span class="material-icons">account_balance_wallet</span></div>
+          <div>
+            <div class="kpi-value">{{ fmtK(totals().totalCredits - totals().totalDebits) }}</div>
+            <div class="kpi-label">Net Position</div>
+            <div class="kpi-sub">Credits − Debits</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon tx"><span class="material-icons">receipt_long</span></div>
+          <div>
+            <div class="kpi-value">{{ totals().txCount.toLocaleString() }}</div>
+            <div class="kpi-label">Transactions</div>
+            <div class="kpi-sub">{{ dateRangeLabel() }}</div>
           </div>
         </div>
       </div>
-      <div class="chart-legend">
-        <span class="legend-dot credit"></span> Credits &nbsp;
-        <span class="legend-dot debit"></span> Debits
+
+      <!-- Bar chart -->
+      <div class="chart-card" *ngIf="monthlySummary().length">
+        <div class="chart-header">
+          <h3>Credit vs Debit by Month</h3>
+          <span class="chart-period">{{ dateRangeLabel() }}</span>
+        </div>
+        <div class="chart-body">
+          <div class="chart-row" *ngFor="let m of monthlySummary()">
+            <div class="chart-label">{{ m.month }}</div>
+            <div class="chart-bars">
+              <div class="bar-wrap">
+                <div class="bar credit" [style.width.%]="barWidth(m.credits)"></div>
+                <span>{{ fmtK(m.credits) }}</span>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar debit" [style.width.%]="barWidth(m.debits)"></div>
+                <span>{{ fmtK(m.debits) }}</span>
+              </div>
+            </div>
+            <div class="chart-net" [class.pos]="m.net >= 0" [class.neg]="m.net < 0">
+              {{ m.net >= 0 ? '+' : '' }}{{ fmtK(m.net) }}
+            </div>
+          </div>
+        </div>
+        <div class="chart-legend">
+          <span class="legend-dot credit"></span> Credits &nbsp;
+          <span class="legend-dot debit"></span> Debits
+        </div>
+      </div>
+
+      <!-- Top customers -->
+      <div class="table-card" *ngIf="topCustomers().length">
+        <div class="table-title">Top Customers by Transaction Volume</div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer</th>
+              <th class="right">Credits</th>
+              <th class="right">Debits</th>
+              <th class="right">Volume</th>
+              <th class="right">Tx Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of topCustomers(); let i = index">
+              <td class="rank">{{ i + 1 }}</td>
+              <td>
+                <div class="cust-mini">
+                  <div class="avatar-sm">{{ c.customerName[0] }}</div>
+                  <div>
+                    <div class="cust-n">{{ c.customerName }}</div>
+                    <div class="cust-id">{{ c._id }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="right credit-val">{{ fmt(c.credits) }}</td>
+              <td class="right debit-val">{{ fmt(c.debits) }}</td>
+              <td class="right"><strong>{{ fmt(c.totalVolume) }}</strong></td>
+              <td class="right">{{ c.txCount }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </ng-container>
+  </ng-container>
+
+  <!-- ══ TRANSACTIONS ═══════════════════════════════════════════════════ -->
+  <ng-container *ngIf="activeSection() === 'transactions'">
+
+    <!-- Sub-filters -->
+    <div class="tx-filters">
+      <div class="filter-group">
+        <label>Customer</label>
+        <select [ngModel]="txCustFilter()" (ngModelChange)="txCustFilter.set($event); txPage.set(1); loadTransactions()">
+          <option value="all">All Customers</option>
+          <option *ngFor="let c of customers()" [value]="c.displayId">{{ c.name }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Type</label>
+        <select [ngModel]="txTypeFilter()" (ngModelChange)="txTypeFilter.set($event); txPage.set(1); loadTransactions()">
+          <option value="">All Types</option>
+          <option value="credit">Credits Only</option>
+          <option value="debit">Debits Only</option>
+        </select>
+      </div>
+      <div class="tx-count" *ngIf="txTotal() > 0">
+        {{ txTotal() }} entries found
       </div>
     </div>
 
-  </ng-container>
+    <div *ngIf="txLoading()" class="loading-row">
+      <span class="material-icons spin">sync</span> Loading transactions…
+    </div>
 
-  <!-- ══ MONTHLY SUMMARY ════════════════════════════════════════════ -->
-  <ng-container *ngIf="activeSection() === 'monthly'">
-    <div class="table-card">
-      <div class="table-title">Monthly Financial Summary — 2026</div>
+    <div class="table-card" *ngIf="!txLoading()">
       <table>
         <thead>
           <tr>
-            <th>Month</th>
-            <th class="right">Total Credits</th>
-            <th class="right">Total Debits</th>
-            <th class="right">Net</th>
-            <th class="right">Transactions</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Account</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Type</th>
+            <th class="right">Amount</th>
+            <th class="right">Balance</th>
+            <th>Ref</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let m of monthlySummary">
-            <td class="month-cell">{{ m.month }}</td>
-            <td class="right credit-val">{{ fmt(m.credits) }}</td>
-            <td class="right debit-val">{{ fmt(m.debits) }}</td>
-            <td class="right" [class.net-pos]="m.net >= 0" [class.net-neg]="m.net < 0">
-              {{ fmt(m.net) }}
+          <tr *ngFor="let e of txEntries()">
+            <td class="date-cell">{{ fmtDate(e.date) }}</td>
+            <td>
+              <div class="cust-mini">
+                <div class="avatar-sm">{{ e.customerName[0] }}</div>
+                <div>
+                  <div class="cust-n">{{ e.customerName }}</div>
+                  <div class="cust-id">{{ e.customerDisplayId }}</div>
+                </div>
+              </div>
             </td>
-            <td class="right">{{ m.txCount.toLocaleString() }}</td>
+            <td class="mono">{{ e.accountNo }}</td>
+            <td class="desc-cell">{{ e.description }}</td>
+            <td>
+              <span class="cat-chip">{{ deptLabel(e.category) }}</span>
+            </td>
+            <td>
+              <span class="type-pill" [class]="e.entryType === 'credit' ? 'credit-pill' : 'debit-pill'">
+                {{ e.entryType | titlecase }}
+              </span>
+            </td>
+            <td class="right" [class]="e.entryType === 'credit' ? 'credit-val' : 'debit-val'">
+              {{ e.entryType === 'credit' ? '+' : '-' }}{{ fmt(e.amount) }}
+            </td>
+            <td class="right mono">{{ fmt(e.runningBalance) }}</td>
+            <td class="ref-cell">{{ e.ref }}</td>
+          </tr>
+          <tr *ngIf="txEntries().length === 0">
+            <td colspan="9" class="empty-row">
+              <span class="material-icons">search_off</span>
+              <p>No transactions found for this filter.</p>
+            </td>
           </tr>
         </tbody>
-        <tfoot>
-          <tr class="totals-row">
-            <td><strong>YTD Total</strong></td>
-            <td class="right credit-val"><strong>{{ fmt(ytdTotals.credits) }}</strong></td>
-            <td class="right debit-val"><strong>{{ fmt(ytdTotals.debits) }}</strong></td>
-            <td class="right net-pos"><strong>{{ fmt(ytdTotals.net) }}</strong></td>
-            <td class="right"><strong>{{ ytdTotals.txCount.toLocaleString() }}</strong></td>
-          </tr>
-        </tfoot>
       </table>
+
+      <!-- Pagination -->
+      <div class="pagination" *ngIf="txPages() > 1">
+        <button [disabled]="txPage() <= 1" (click)="txPageChange(txPage() - 1)">
+          <span class="material-icons">chevron_left</span>
+        </button>
+        <span>Page {{ txPage() }} of {{ txPages() }}</span>
+        <button [disabled]="txPage() >= txPages()" (click)="txPageChange(txPage() + 1)">
+          <span class="material-icons">chevron_right</span>
+        </button>
+      </div>
     </div>
   </ng-container>
 
-  <!-- ══ BY DEPARTMENT ══════════════════════════════════════════════ -->
-  <ng-container *ngIf="activeSection() === 'dept'">
-    <div class="dept-grid">
-      <div class="dept-card" *ngFor="let d of deptSummary">
+  <!-- ══ BY CATEGORY ════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="activeSection() === 'departments'">
+
+    <div *ngIf="deptLoading()" class="loading-row">
+      <span class="material-icons spin">sync</span> Loading category breakdown…
+    </div>
+
+    <div class="dept-grid" *ngIf="!deptLoading()">
+      <div class="dept-card" *ngFor="let d of deptRows()">
         <div class="dept-header">
-          <div class="dept-dot" [style.background]="d.color"></div>
+          <div class="dept-dot" [style.background]="deptColor(d._id)"></div>
           <div>
-            <div class="dept-name">{{ d.dept }}</div>
-            <div class="dept-no">Dept #{{ d.deptNo }}</div>
+            <div class="dept-name">{{ deptLabel(d._id) }}</div>
+            <div class="dept-no">{{ d.count }} transactions</div>
           </div>
         </div>
         <div class="dept-stats">
@@ -154,26 +284,33 @@
             <span class="ds-val debit-val">{{ fmtK(d.debits) }}</span>
           </div>
           <div class="dept-stat">
-            <span class="ds-label">Balance</span>
-            <span class="ds-val" [class.net-pos]="d.balance > 0">{{ fmtK(d.balance) }}</span>
+            <span class="ds-label">Net</span>
+            <span class="ds-val" [class.net-pos]="d.credits - d.debits >= 0">
+              {{ fmtK(d.credits - d.debits) }}
+            </span>
           </div>
         </div>
         <div class="dept-bar-bg">
           <div class="dept-bar-fill"
             [style.width.%]="creditRatio(d)"
-            [style.background]="d.color"></div>
+            [style.background]="deptColor(d._id)"></div>
         </div>
         <div class="dept-bar-legend">
           <span>{{ creditRatio(d) }}% credit ratio</span>
         </div>
       </div>
+
+      <div *ngIf="deptRows().length === 0" class="empty-row" style="grid-column: 1/-1; padding: 48px; text-align:center; color:#9CA3AF">
+        <span class="material-icons" style="font-size:40px; display:block; margin-bottom:8px">bar_chart</span>
+        <p>No data for selected range.</p>
+      </div>
     </div>
   </ng-container>
 
-  <!-- ══ EXPORT REPORTS ═════════════════════════════════════════════ -->
+  <!-- ══ EXPORT REPORTS ════════════════════════════════════════════════ -->
   <ng-container *ngIf="activeSection() === 'exports'">
     <div class="exports-list">
-      <div class="export-item" *ngFor="let r of reportItems">
+      <div class="export-item" *ngFor="let r of exportReports">
         <div class="export-icon">
           <span class="material-icons">{{ r.icon }}</span>
         </div>
@@ -182,8 +319,7 @@
           <div class="export-desc">{{ r.desc }}</div>
         </div>
         <div class="export-meta">
-          <span class="type-badge">{{ r.type }}</span>
-          <span class="period-badge">{{ r.period }}</span>
+          <span class="type-badge">{{ r.format }}</span>
         </div>
         <button class="download-btn"
           [class.generating]="generating() === r.title"

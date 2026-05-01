@@ -8,173 +8,200 @@
     </div>
     <div class="header-hint">
       <span class="material-icons">record_voice_over</span>
-      Say "Maya, show frozen cards"
+      Say "Maya, show frozen cards" or "freeze Vijaya's card"
     </div>
   </div>
 
-  <!-- Stats row -->
-  <div class="stats-row">
-    <div class="stat-card" (click)="activeTab.set('all')" [class.active]="activeTab() === 'all'">
-      <span class="stat-icon material-icons">credit_card</span>
-      <div>
-        <div class="stat-value">{{ stats.total }}</div>
-        <div class="stat-label">Total Cards</div>
-      </div>
-    </div>
-    <div class="stat-card frozen" (click)="activeTab.set('frozen')" [class.active]="activeTab() === 'frozen'">
-      <span class="stat-icon material-icons">lock</span>
-      <div>
-        <div class="stat-value">{{ stats.frozen }}</div>
-        <div class="stat-label">Frozen</div>
-      </div>
-    </div>
-    <div class="stat-card disputed" (click)="activeTab.set('disputed')" [class.active]="activeTab() === 'disputed'">
-      <span class="stat-icon material-icons">report_problem</span>
-      <div>
-        <div class="stat-value">{{ stats.disputed }}</div>
-        <div class="stat-label">Disputed</div>
-      </div>
-    </div>
-    <div class="stat-card expiring" (click)="activeTab.set('expiring')" [class.active]="activeTab() === 'expiring'">
-      <span class="stat-icon material-icons">schedule</span>
-      <div>
-        <div class="stat-value">{{ stats.expiring }}</div>
-        <div class="stat-label">Expiring Soon</div>
-      </div>
-    </div>
+  <!-- Loading / Error -->
+  <div *ngIf="loading()" class="state-msg">
+    <span class="material-icons spin">sync</span> Loading cards from server…
+  </div>
+  <div *ngIf="error()" class="state-msg error">
+    <span class="material-icons">error_outline</span> {{ error() }}
+    <button (click)="loadCards()">Retry</button>
   </div>
 
-  <!-- Filter tabs + search -->
-  <div class="toolbar">
-    <div class="tabs">
-      <button *ngFor="let t of tabs"
-        class="tab-btn"
-        [class.active]="activeTab() === t.key"
-        (click)="activeTab.set(t.key)">
-        {{ t.label }}
-        <span class="tab-count">{{ countFor(t.key) }}</span>
-      </button>
-    </div>
-    <div class="search-wrap">
-      <span class="material-icons">search</span>
-      <input [(ngModel)]="searchQ" [ngModel]="searchQ()" (ngModelChange)="searchQ.set($event)"
-             placeholder="Search by customer, card number…" />
-    </div>
-  </div>
+  <ng-container *ngIf="!loading() && !error()">
 
-  <!-- Cards table -->
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Customer</th>
-          <th>Card</th>
-          <th>Network</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>Expiry</th>
-          <th>Last Used</th>
-          <th>Disputes</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ng-container *ngFor="let c of filtered()">
-          <tr [class.selected]="selected()?.id === c.id" (click)="selectCard(c)">
-            <td>
-              <div class="cust-cell">
-                <div class="avatar">{{ c.customer[0] }}</div>
-                <div>
-                  <div class="cust-name">{{ c.customer }}</div>
-                  <div class="cust-id">{{ c.customerId }}</div>
-                </div>
-              </div>
-            </td>
-            <td class="mono">{{ c.masked }}</td>
-            <td>{{ c.network }}</td>
-            <td>
-              <span class="badge" [class]="c.type === 'Credit' ? 'badge-credit' : 'badge-debit'">
-                {{ c.type }}
-              </span>
-            </td>
-            <td>
-              <span class="status-pill" [class]="'status-' + c.status">
-                {{ statusLabel(c.status) }}
-              </span>
-            </td>
-            <td [class.expiry-warn]="c.expiry <= '2026-06'">{{ c.expiry }}</td>
-            <td>{{ formatDate(c.lastUsed) }}</td>
-            <td>
-              <span *ngIf="c.disputes > 0" class="dispute-badge">{{ c.disputes }}</span>
-              <span *ngIf="c.disputes === 0" class="no-disputes">—</span>
-            </td>
-            <td>
-              <div class="action-btns" (click)="$event.stopPropagation()">
-                <button class="act-btn freeze-btn" (click)="toggleFreeze(c, $event)"
-                  [title]="c.status === 'frozen' ? 'Unfreeze Card' : 'Freeze Card'">
-                  <span class="material-icons">{{ c.status === 'frozen' ? 'lock_open' : 'lock' }}</span>
-                </button>
-                <button class="act-btn view-btn" title="View Details" (click)="selectCard(c)">
-                  <span class="material-icons">open_in_new</span>
-                </button>
-              </div>
-            </td>
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-card" (click)="activeTab.set('all')" [class.active]="activeTab() === 'all'">
+        <span class="stat-icon material-icons">credit_card</span>
+        <div>
+          <div class="stat-value">{{ stats.total }}</div>
+          <div class="stat-label">Total Cards</div>
+        </div>
+      </div>
+      <div class="stat-card frozen" (click)="activeTab.set('frozen')" [class.active]="activeTab() === 'frozen'">
+        <span class="stat-icon material-icons">lock</span>
+        <div>
+          <div class="stat-value">{{ stats.frozen }}</div>
+          <div class="stat-label">Frozen</div>
+        </div>
+      </div>
+      <div class="stat-card disputed" (click)="activeTab.set('disputed')" [class.active]="activeTab() === 'disputed'">
+        <span class="stat-icon material-icons">report_problem</span>
+        <div>
+          <div class="stat-value">{{ stats.disputed }}</div>
+          <div class="stat-label">Disputed</div>
+        </div>
+      </div>
+      <div class="stat-card expiring" (click)="activeTab.set('expiring')" [class.active]="activeTab() === 'expiring'">
+        <span class="stat-icon material-icons">schedule</span>
+        <div>
+          <div class="stat-value">{{ stats.expiring }}</div>
+          <div class="stat-label">Expiring Soon</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter tabs + search -->
+    <div class="toolbar">
+      <div class="tabs">
+        <button *ngFor="let t of tabs"
+          class="tab-btn"
+          [class.active]="activeTab() === t.key"
+          (click)="activeTab.set(t.key)">
+          {{ t.label }}
+          <span class="tab-count">{{ countFor(t.key) }}</span>
+        </button>
+      </div>
+      <div class="search-wrap">
+        <span class="material-icons">search</span>
+        <input [ngModel]="searchQ()" (ngModelChange)="searchQ.set($event)"
+               placeholder="Search by customer, card number, network…" />
+      </div>
+    </div>
+
+    <!-- Cards table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Card Number</th>
+            <th>Network</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Expiry</th>
+            <th>Disputes</th>
+            <th>Actions</th>
           </tr>
-
-          <!-- Expanded detail row -->
-          <tr *ngIf="selected()?.id === c.id" class="detail-row">
-            <td colspan="9">
-              <div class="detail-panel">
-                <div class="detail-grid">
-                  <div class="detail-item">
-                    <label>Card ID</label>
-                    <span>{{ c.id }}</span>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let c of filtered()">
+            <tr [class.selected]="selected()?._id === c._id" (click)="selectCard(c)">
+              <td>
+                <div class="cust-cell">
+                  <div class="avatar">{{ c.customerName[0] }}</div>
+                  <div>
+                    <div class="cust-name">{{ c.customerName }}</div>
+                    <div class="cust-id">{{ c.customerDisplayId }}</div>
                   </div>
-                  <div class="detail-item">
-                    <label>Issued Date</label>
-                    <span>{{ formatDate(c.issuedDate) }}</span>
-                  </div>
-                  <div class="detail-item">
-                    <label>Network</label>
-                    <span>{{ c.network }}</span>
-                  </div>
-                  <div class="detail-item">
-                    <label>Open Disputes</label>
-                    <span [style.color]="c.disputes > 0 ? '#DC2626' : '#6B7280'">
-                      {{ c.disputes > 0 ? c.disputes + ' active' : 'None' }}
+                </div>
+              </td>
+              <td class="mono">{{ c.maskedNumber }}</td>
+              <td>{{ c.network }}</td>
+              <td>
+                <span class="badge" [class]="c.cardType === 'credit' ? 'badge-credit' : 'badge-debit'">
+                  {{ c.cardType | titlecase }}
+                </span>
+              </td>
+              <td>
+                <span class="status-pill" [class]="'status-' + c.status">
+                  {{ statusLabel(c.status) }}
+                </span>
+              </td>
+              <td [class.expiry-warn]="isExpiryWarn(c.expiryDate)">{{ c.expiryDate }}</td>
+              <td>
+                <span *ngIf="c.disputes > 0" class="dispute-badge">{{ c.disputes }}</span>
+                <span *ngIf="c.disputes === 0" class="no-disputes">—</span>
+              </td>
+              <td>
+                <div class="action-btns" (click)="$event.stopPropagation()">
+                  <button class="act-btn freeze-btn"
+                    [disabled]="togglingId() === c._id"
+                    (click)="toggleFreeze(c, $event)"
+                    [title]="c.status === 'frozen' ? 'Unfreeze Card' : 'Freeze Card'">
+                    <span class="material-icons">
+                      {{ togglingId() === c._id ? 'hourglass_top' : (c.status === 'frozen' ? 'lock_open' : 'lock') }}
                     </span>
+                  </button>
+                  <button class="act-btn view-btn" title="View Details" (click)="selectCard(c)">
+                    <span class="material-icons">open_in_new</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Expanded detail row -->
+            <tr *ngIf="selected()?._id === c._id" class="detail-row">
+              <td colspan="8">
+                <div class="detail-panel">
+                  <div class="detail-grid">
+                    <div class="detail-item">
+                      <label>Cardholder</label>
+                      <span>{{ c.cardholderName }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <label>Network</label>
+                      <span>{{ c.network }}</span>
+                    </div>
+                    <div class="detail-item" *ngIf="c.cardType === 'credit'">
+                      <label>Credit Limit</label>
+                      <span>${{ c.creditLimit?.toLocaleString() }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <label>Balance</label>
+                      <span>${{ c.currentBalance.toLocaleString() }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <label>Open Disputes</label>
+                      <span [style.color]="c.disputes > 0 ? '#DC2626' : '#6B7280'">
+                        {{ c.disputes > 0 ? c.disputes + ' active' : 'None' }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="detail-actions">
+                    <button class="detail-action-btn primary"
+                      *ngIf="c.status !== 'frozen'"
+                      [disabled]="togglingId() === c._id"
+                      (click)="toggleFreeze(c)">
+                      <span class="material-icons">lock</span>
+                      {{ togglingId() === c._id ? 'Freezing…' : 'Freeze Card' }}
+                    </button>
+                    <button class="detail-action-btn success"
+                      *ngIf="c.status === 'frozen'"
+                      [disabled]="togglingId() === c._id"
+                      (click)="toggleFreeze(c)">
+                      <span class="material-icons">lock_open</span>
+                      {{ togglingId() === c._id ? 'Unfreezing…' : 'Unfreeze Card' }}
+                    </button>
+                    <button class="detail-action-btn warning">
+                      <span class="material-icons">report_problem</span> File Dispute
+                    </button>
+                    <button class="detail-action-btn secondary">
+                      <span class="material-icons">autorenew</span> Request Replacement
+                    </button>
+                    <button class="detail-action-btn secondary">
+                      <span class="material-icons">history</span> Transaction History
+                    </button>
                   </div>
                 </div>
-                <div class="detail-actions">
-                  <button class="detail-action-btn primary" *ngIf="c.status !== 'frozen'" (click)="toggleFreeze(c, $event)">
-                    <span class="material-icons">lock</span> Freeze Card
-                  </button>
-                  <button class="detail-action-btn success" *ngIf="c.status === 'frozen'" (click)="toggleFreeze(c, $event)">
-                    <span class="material-icons">lock_open</span> Unfreeze Card
-                  </button>
-                  <button class="detail-action-btn warning">
-                    <span class="material-icons">report_problem</span> File Dispute
-                  </button>
-                  <button class="detail-action-btn secondary">
-                    <span class="material-icons">autorenew</span> Request Replacement
-                  </button>
-                  <button class="detail-action-btn secondary">
-                    <span class="material-icons">history</span> Transaction History
-                  </button>
-                </div>
-              </div>
+              </td>
+            </tr>
+          </ng-container>
+
+          <tr *ngIf="filtered().length === 0">
+            <td colspan="8" class="empty-row">
+              <span class="material-icons">search_off</span>
+              <p>No cards match your filter.</p>
             </td>
           </tr>
-        </ng-container>
+        </tbody>
+      </table>
+    </div>
 
-        <tr *ngIf="filtered().length === 0">
-          <td colspan="9" class="empty-row">
-            <span class="material-icons">search_off</span>
-            <p>No cards match your filter.</p>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  </ng-container>
 
 </div>
