@@ -577,11 +577,22 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
+  /** Pick the best debit account: prefer checking → savings → rd → any */
+  private pickDebitAccount(): string {
+    const all = this.accounts();
+    return (
+      all.find(a => a.type === 'checking')?._id ??
+      all.find(a => a.type === 'savings')?._id ??
+      all.find(a => a.type === 'rd')?._id ??
+      all.find(a => a.type !== 'credit')?._id ??
+      all[0]?._id ??
+      ''
+    );
+  }
+
   /** Internal — renders the confirm widget once accounts are guaranteed loaded. */
   private _showQuickPayWidget(payee: Payee, amount: number): void {
-    const fromAccountId = this.accounts().find(
-      a => a.type === 'checking' || a.type === 'savings'
-    )?._id ?? '';
+    const fromAccountId = this.pickDebitAccount();
 
     // Maya's acknowledgement text
     this.addAssistantMessage(
@@ -617,13 +628,13 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       try {
         const accs = await lastValueFrom(this.api.getAccounts());
         this.accounts.set(accs);
-        fromAccountId = accs.find(a => a.type === 'checking' || a.type === 'savings')?._id ?? '';
+        fromAccountId = this.pickDebitAccount();
       } catch { /* will fail below with clear error */ }
     }
 
     if (!fromAccountId) {
       this.quickPayExecuting.set(false);
-      this.addAssistantMessage('❌ No checking/savings account found to send from. Please check your accounts.');
+      this.addAssistantMessage('❌ No debit account found. Please run the seed script on the backend (`npx ts-node src/seed.ts`) to set up demo accounts.');
       return;
     }
 
