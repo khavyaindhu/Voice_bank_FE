@@ -234,8 +234,8 @@ export interface CreatePayeePayload {
 
 export interface StaffCard {
   _id:               string;
-  customerDisplayId: string;
-  customerName:      string;
+  customerDisplayId?: string;
+  customerName?:      string;
   cardType:          'credit' | 'debit';
   network:           'Visa' | 'Mastercard';
   maskedNumber:      string;

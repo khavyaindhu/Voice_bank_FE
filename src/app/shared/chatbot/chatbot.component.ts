@@ -472,12 +472,62 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       return true;
     }
 
+    // ── Reports: summary / transactions by date range ────────────────
+    // Must be checked BEFORE FMS so "show last week transactions" doesn't go to FMS
+    // Patterns: "show current month summary", "show last month summary",
+    //           "show transactions for Vijaya current month", "show last week transactions",
+    //           "show last 3 months summary", "show YTD report"
+    const isReportCmd =
+      /(?:summary|report|overview)/i.test(lower) ||
+      /transactions?\s+for\s+/i.test(lower) ||
+      // "[name] transactions [period]" e.g. "show Ramesh transactions last month"
+      /\b\w+\s+transactions?\s+(?:last|current|this|ytd|year|month|week)/i.test(lower) ||
+      // "show last/current/ytd..." not targeting an FMS account number
+      (/show\s+(?:last|current|this|ytd|year)/i.test(lower) && !/fms|ledger|\b91\d{6}\b/i.test(lower));
+
+    if (isReportCmd) {
+      // Detect date preset
+      let reportPreset = 'ytd';
+      if      (/current\s*month|this\s*month|april/i.test(lower))        reportPreset = 'currentmonth';
+      else if (/last\s*month|previous\s*month|march/i.test(lower))       reportPreset = 'lastmonth';
+      else if (/last\s*week|past\s*7\s*days?/i.test(lower))              reportPreset = 'lastweek';
+      else if (/last\s*3\s*months?|last\s*three\s*months?/i.test(lower)) reportPreset = 'last3months';
+      else if (/ytd|year\s*to\s*date|this\s*year/i.test(lower))          reportPreset = 'ytd';
+
+      // Detect customer — two patterns:
+      // 1. "transactions for [name]..."   2. "show [name] transactions..."
+      const custForMatch =
+        lower.match(/transactions?\s+for\s+([a-z][a-z ]{1,30}?)(?:\s+(?:current|last|this|ytd|year|month|week|summary)|$)/i) ??
+        lower.match(/show\s+([a-z][a-z ]{2,30}?)\s+transactions?/i);
+      const reportCustomer = custForMatch?.[1]?.trim() ?? '';
+
+      // Detect section
+      const reportSection = /transaction/i.test(lower) ? 'transactions' : 'overview';
+
+      const presetLabel: Record<string, string> = {
+        currentmonth: 'current month', lastmonth: 'last month',
+        lastweek: 'last 7 days', last3months: 'last 3 months', ytd: 'year to date',
+      };
+
+      this.staffCtx.setReport(reportPreset, reportCustomer, reportSection);
+      this.addAssistantMessage(
+        `📈 Opening **Reports** — ${presetLabel[reportPreset]}` +
+        (reportCustomer ? ` for **${reportCustomer}**` : '') +
+        `...\n\nLoading ${reportSection === 'transactions' ? 'transaction detail' : 'summary'} now.`
+      );
+      setTimeout(() => this.router.navigate(['/staff/reports']), 600);
+      return true;
+    }
+
     // ── FMS Account / Transactions ───────────────────────────────────
     // Patterns: "show Agni test transactions", "open FMS account 91000038",
     //           "show current month transactions for Currency", "load Agni transactions for March"
     const fmsRx = /(?:show|open|find|get|load|pull\s*up)\s+(?:fms\s+(?:account\s+)?)?(.+?)\s+(?:transactions?|account|ledger|entries)/i;
     const fmsMatch = msg.match(fmsRx);
-    if ((fmsMatch || /fms|ledger|account\s+\d{8}/i.test(lower)) && !/customer|client/i.test(lower)) {
+    if ((fmsMatch || /fms|ledger|account\s+\d{8}/i.test(lower)) &&
+        !/customer|client/i.test(lower) &&
+        !/summary|report|\bfor\s+[a-z]/i.test(lower) &&
+        !/last\s+(?:week|month)|current\s+month|ytd/i.test(lower)) {
       let searchTerm = '';
       if (fmsMatch) {
         searchTerm = fmsMatch[1].trim();
@@ -508,19 +558,51 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       return true;
     }
 
+    // ── Card: Freeze / Unfreeze a specific customer's card ───────────
+    // "freeze Vijaya's card", "freeze ABC vendors card", "unfreeze Ramesh card"
+    const freezeRx = /(?:freeze|block|lock|unfreeze|unlock)\s+(.+?)'?s?\s+card/i;
+    const freezeMatch = msg.match(freezeRx);
+    if (freezeMatch) {
+      const target = freezeMatch[1].trim();
+      const action = /unfreeze|unlock/i.test(lower) ? 'unfreeze' : 'freeze';
+      this.staffCtx.setCardFreeze(target);
+      this.addAssistantMessage(
+        `🔒 ${action === 'freeze' ? 'Freezing' : 'Unfreezing'} card for **"${target}"**...\n\nNavigating to Card Services and executing now.`
+      );
+      setTimeout(() => this.router.navigate(['/staff/cards']), 600);
+      return true;
+    }
+
+    // ── Card: Filter by status ────────────────────────────────────────
+    // "show frozen cards", "show disputed cards", "show cards expiring soon", "show active cards"
+    const cardFilterRx = /show\s+(?:all\s+)?(?:the\s+)?(frozen|disputed|expiring(?:\s+soon)?|active)\s+cards?/i;
+    const cardFilterMatch = lower.match(cardFilterRx);
+    if (cardFilterMatch) {
+      let tab = cardFilterMatch[1].toLowerCase();
+      if (tab.startsWith('expiring')) tab = 'expiring';
+      this.staffCtx.setCardFilter(tab);
+      this.addAssistantMessage(
+        `💳 Filtering Card Services to show **${tab}** cards...`
+      );
+      setTimeout(() => this.router.navigate(['/staff/cards']), 500);
+      return true;
+    }
+
+    // ── Card: Generic navigation ──────────────────────────────────────
+    if (/(?:go\s+to|open|show)\s+card\s+services?/i.test(lower) ||
+        /card\s+(?:management|admin|lookup)/i.test(lower) ||
+        /show\s+(?:all\s+)?cards?$/i.test(lower)) {
+      this.staffCtx.setCardFilter('all');
+      this.addAssistantMessage(`💳 Navigating to **Card Services**...`);
+      setTimeout(() => this.router.navigate(['/staff/cards']), 500);
+      return true;
+    }
+
     // ── Staff Dashboard ──────────────────────────────────────────────
     if (/(?:go\s+to|open|show)\s+(?:staff\s+)?dashboard/i.test(lower) ||
         /staff\s+(?:home|main|overview)/i.test(lower)) {
       this.addAssistantMessage(`🏠 Navigating to **Staff Dashboard**...`);
       setTimeout(() => this.router.navigate(['/staff/dashboard']), 500);
-      return true;
-    }
-
-    // ── Card Services ────────────────────────────────────────────────
-    if (/(?:go\s+to|open|show)\s+card\s+services?/i.test(lower) ||
-        /card\s+(?:management|admin|lookup)/i.test(lower)) {
-      this.addAssistantMessage(`💳 Navigating to **Card Services**...`);
-      setTimeout(() => this.router.navigate(['/staff/cards']), 500);
       return true;
     }
 

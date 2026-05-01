@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, inject } from '@angular/core';
+import { Component, signal, OnInit, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -8,6 +8,7 @@ import {
   LedgerEntryApi,
   DeptRowApi,
 } from '../../../core/services/api.service';
+import { StaffContextService } from '../../../core/services/staff-context.service';
 
 type SectionTab = 'overview' | 'transactions' | 'departments' | 'exports';
 type Preset = 'currentmonth' | 'lastmonth' | 'lastweek' | 'last3months' | 'ytd' | 'custom';
@@ -44,7 +45,8 @@ interface ReportExport {
   styleUrl: './staff-reports.component.scss',
 })
 export class StaffReportsComponent implements OnInit {
-  private api = inject(ApiService);
+  private api      = inject(ApiService);
+  private staffCtx = inject(StaffContextService);
 
   // ── UI state ──────────────────────────────────────────────────────
   activeSection = signal<SectionTab>('overview');
@@ -95,6 +97,39 @@ export class StaffReportsComponent implements OnInit {
     { title: 'April 2026 – Loan Payment Report',    desc: 'All loan repayments received in April',       icon: 'account_balance',format: 'CSV', preset: 'currentmonth' },
     { title: 'FY 2025 – Annual Report',             desc: 'Full year consolidated financials (mock)',    icon: 'library_books',  format: 'PDF', preset: 'ytd'          },
   ];
+
+  constructor() {
+    // Reactively respond to Maya setting a report preset —
+    // works even when the component is already mounted
+    effect(() => {
+      const preset = this.staffCtx.reportPreset();
+      if (!preset) return;
+
+      // Apply preset
+      this.preset.set(preset as Preset);
+
+      // Apply section
+      const section = (this.staffCtx.reportSection() || 'overview') as SectionTab;
+      this.activeSection.set(section);
+
+      // Apply customer filter for transactions
+      const customerName = this.staffCtx.reportCustomer();
+      if (customerName && section === 'transactions') {
+        const match = this.customers().find(c =>
+          c.name.toLowerCase().includes(customerName.toLowerCase())
+        );
+        this.txCustFilter.set(match ? match.displayId : 'all');
+        this.txPage.set(1);
+      }
+
+      // Load data
+      this.loadSummary();
+      if (section === 'transactions') this.loadTransactions();
+      if (section === 'departments')  this.loadDepartments();
+
+      this.staffCtx.setReport('', '', ''); // clear after consuming
+    });
+  }
 
   ngOnInit(): void {
     this.api.getReportCustomers().subscribe(c => this.customers.set(c));
