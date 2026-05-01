@@ -565,26 +565,31 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (freezeMatch) {
       const target = freezeMatch[1].trim();
       const action = /unfreeze|unlock/i.test(lower) ? 'unfreeze' : 'freeze';
-      this.staffCtx.setCardFreeze(target);
       this.addAssistantMessage(
         `🔒 ${action === 'freeze' ? 'Freezing' : 'Unfreezing'} card for **"${target}"**...\n\nNavigating to Card Services and executing now.`
       );
-      setTimeout(() => this.router.navigate(['/staff/cards']), 600);
+      // Navigate first, THEN set signal so the newly mounted component picks it up
+      this.router.navigate(['/staff/cards']).then(() => {
+        this.staffCtx.setCardFreeze(target);
+      });
       return true;
     }
 
     // ── Card: Filter by status ────────────────────────────────────────
-    // "show frozen cards", "show disputed cards", "show cards expiring soon", "show active cards"
-    const cardFilterRx = /show\s+(?:all\s+)?(?:the\s+)?(frozen|disputed|expiring(?:\s+soon)?|active)\s+cards?/i;
+    // "show frozen cards", "show disputed cards", "show expiring soon", "show active cards"
+    // "cards" at end is optional — e.g. "show expiring soon" also matches
+    const cardFilterRx = /show\s+(?:all\s+)?(?:the\s+)?(frozen|disputed|expiring(?:\s+soon)?|active)(?:\s+cards?)?$/i;
     const cardFilterMatch = lower.match(cardFilterRx);
     if (cardFilterMatch) {
       let tab = cardFilterMatch[1].toLowerCase();
       if (tab.startsWith('expiring')) tab = 'expiring';
-      this.staffCtx.setCardFilter(tab);
-      this.addAssistantMessage(
-        `💳 Filtering Card Services to show **${tab}** cards...`
-      );
-      setTimeout(() => this.router.navigate(['/staff/cards']), 500);
+      const tabLabel = tab === 'expiring' ? 'expiring soon' : tab;
+      this.addAssistantMessage(`💳 Filtering Card Services to show **${tabLabel}** cards...`);
+      // Navigate first, THEN set signal — avoids race condition where
+      // existing component clears the signal before new component mounts
+      this.router.navigate(['/staff/cards']).then(() => {
+        this.staffCtx.setCardFilter(tab);
+      });
       return true;
     }
 
@@ -592,9 +597,10 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (/(?:go\s+to|open|show)\s+card\s+services?/i.test(lower) ||
         /card\s+(?:management|admin|lookup)/i.test(lower) ||
         /show\s+(?:all\s+)?cards?$/i.test(lower)) {
-      this.staffCtx.setCardFilter('all');
       this.addAssistantMessage(`💳 Navigating to **Card Services**...`);
-      setTimeout(() => this.router.navigate(['/staff/cards']), 500);
+      this.router.navigate(['/staff/cards']).then(() => {
+        this.staffCtx.setCardFilter('all');
+      });
       return true;
     }
 
