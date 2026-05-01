@@ -455,6 +455,23 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private handleStaffIntent(msg: string): boolean {
     const lower = msg.toLowerCase().trim();
 
+    /**
+     * Navigate to a staff route and then run `after()` to set a signal.
+     * If already on the page the component is already mounted — set the signal
+     * directly so the registered effect fires immediately.
+     * If on a different page — navigate first (so the new component mounts),
+     * then set the signal once the navigation promise resolves.
+     */
+    const goto = (route: string, after: () => void) => {
+      if (this.router.url.startsWith(route)) {
+        // Component already mounted — set signal directly
+        after();
+      } else {
+        // Navigate to page, wait for component to mount, then set signal
+        Promise.resolve(this.router.navigate([route])).then(() => after());
+      }
+    };
+
     // ── Customer Search ──────────────────────────────────────────────
     // Patterns: "search customer Ramesh", "find customer Vijaya", "look up Kavya", "show me customer CUST-001"
     const custRx = /(?:search|find|look\s*up|open|show(?:\s+me)?)\s+(?:customer\s+)?([a-z0-9 .'-]+?)(?:\s+(?:customer|account|profile|details?))?$/i;
@@ -509,13 +526,14 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         lastweek: 'last 7 days', last3months: 'last 3 months', ytd: 'year to date',
       };
 
-      this.staffCtx.setReport(reportPreset, reportCustomer, reportSection);
       this.addAssistantMessage(
         `📈 Opening **Reports** — ${presetLabel[reportPreset]}` +
         (reportCustomer ? ` for **${reportCustomer}**` : '') +
         `...\n\nLoading ${reportSection === 'transactions' ? 'transaction detail' : 'summary'} now.`
       );
-      setTimeout(() => this.router.navigate(['/staff/reports']), 600);
+      // Use goto: if already on reports page, set signal directly;
+      // otherwise navigate first so the component mounts before the signal is set
+      goto('/staff/reports', () => this.staffCtx.setReport(reportPreset, reportCustomer, reportSection));
       return true;
     }
 
@@ -568,10 +586,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.addAssistantMessage(
         `🔒 ${action === 'freeze' ? 'Freezing' : 'Unfreezing'} card for **"${target}"**...\n\nNavigating to Card Services and executing now.`
       );
-      // Navigate first, THEN set signal so the newly mounted component picks it up
-      this.router.navigate(['/staff/cards']).then(() => {
-        this.staffCtx.setCardFreeze(target);
-      });
+      goto('/staff/cards', () => this.staffCtx.setCardFreeze(target));
       return true;
     }
 
@@ -585,11 +600,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       if (tab.startsWith('expiring')) tab = 'expiring';
       const tabLabel = tab === 'expiring' ? 'expiring soon' : tab;
       this.addAssistantMessage(`💳 Filtering Card Services to show **${tabLabel}** cards...`);
-      // Navigate first, THEN set signal — avoids race condition where
-      // existing component clears the signal before new component mounts
-      this.router.navigate(['/staff/cards']).then(() => {
-        this.staffCtx.setCardFilter(tab);
-      });
+      goto('/staff/cards', () => this.staffCtx.setCardFilter(tab));
       return true;
     }
 
@@ -598,9 +609,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         /card\s+(?:management|admin|lookup)/i.test(lower) ||
         /show\s+(?:all\s+)?cards?$/i.test(lower)) {
       this.addAssistantMessage(`💳 Navigating to **Card Services**...`);
-      this.router.navigate(['/staff/cards']).then(() => {
-        this.staffCtx.setCardFilter('all');
-      });
+      goto('/staff/cards', () => this.staffCtx.setCardFilter('all'));
       return true;
     }
 
