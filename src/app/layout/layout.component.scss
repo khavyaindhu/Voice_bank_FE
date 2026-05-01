@@ -39,6 +39,12 @@ $sidebar-collapsed-w: 64px;
     gap: 16px;
   }
 
+  .navbar-center {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
   .menu-btn {
     background: none;
     border: none;
