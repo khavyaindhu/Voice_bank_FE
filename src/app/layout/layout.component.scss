@@ -76,6 +76,39 @@ $sidebar-collapsed-w: 64px;
     text-transform: uppercase;
   }
 
+  .role-toggle {
+    display: flex;
+    align-items: center;
+    background: rgba(0,0,0,.25);
+    border-radius: 24px;
+    padding: 3px;
+    gap: 2px;
+    margin-left: 14px;
+
+    .role-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 14px;
+      border: none;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: rgba(255,255,255,.7);
+      transition: all .2s;
+      .material-icons { font-size: 15px; }
+
+      &:hover { color: white; background: rgba(255,255,255,.1); }
+
+      &.active {
+        background: white;
+        color: var(--usb-navy);
+      }
+    }
+  }
+
   .navbar-right {
     display: flex;
     align-items: center;
@@ -172,6 +205,29 @@ $sidebar-collapsed-w: 64px;
       &.active { color: white; font-weight: 600; }
     }
   }
+}
+
+  .sidebar-role-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: rgba(255,255,255,.4);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    margin-bottom: 8px;
+    .material-icons { font-size: 14px; }
+  }
+}
+
+// Staff mode — teal sidebar accent
+.layout.staff-mode {
+  .sidebar { background: #0F3460; }
+  .nav-item.active { border-left-color: #38BDF8; }
+  .sidebar-role-label { color: rgba(255,255,255,.5); }
 }
 
 // Main content

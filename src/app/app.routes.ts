@@ -78,6 +78,33 @@ export const routes: Routes = [
           },
         ],
       },
+
+      // ── Bank Staff routes ──────────────────────────────────────────────
+      {
+        path: 'staff/dashboard',
+        loadComponent: () => import('./modules/staff/staff-dashboard/staff-dashboard.component').then(m => m.StaffDashboardComponent),
+        data: { screen: 'staff/dashboard' },
+      },
+      {
+        path: 'staff/customers',
+        loadComponent: () => import('./modules/staff/customer-search/customer-search.component').then(m => m.CustomerSearchComponent),
+        data: { screen: 'staff/customers' },
+      },
+      {
+        path: 'staff/fms',
+        loadComponent: () => import('./modules/staff/fms-lookup/fms-lookup.component').then(m => m.FmsLookupComponent),
+        data: { screen: 'staff/fms' },
+      },
+      {
+        path: 'staff/cards',
+        loadComponent: () => import('./modules/staff/staff-cards/staff-cards.component').then(m => m.StaffCardsComponent),
+        data: { screen: 'staff/cards' },
+      },
+      {
+        path: 'staff/reports',
+        loadComponent: () => import('./modules/staff/staff-reports/staff-reports.component').then(m => m.StaffReportsComponent),
+        data: { screen: 'staff/reports' },
+      },
     ],
   },
   { path: '**', redirectTo: '' },

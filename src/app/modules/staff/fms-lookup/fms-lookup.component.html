@@ -1,0 +1,141 @@
+<div class="page-wrap">
+
+  <div class="page-header">
+    <div>
+      <h2><span class="material-icons">account_tree</span> FMS Account Lookup</h2>
+      <p>Financial Management System — Search accounts and view transactions instantly</p>
+    </div>
+    <div class="header-hint">
+      <span class="material-icons">record_voice_over</span>
+      Say "Show Agni Test transactions for April"
+    </div>
+  </div>
+
+  <div class="split-layout">
+
+    <!-- LEFT — Account list -->
+    <div class="account-panel">
+      <div class="search-wrap">
+        <span class="material-icons">search</span>
+        <input class="search-input" type="text" placeholder="Search by account #, dept or description…"
+               [value]="searchQ()" (input)="searchQ.set($any($event.target).value)" />
+      </div>
+
+      <div class="account-count">{{ filtered().length }} accounts</div>
+
+      <div class="account-table">
+        <div class="at-head">
+          <span>Account #</span><span>Dept</span><span>Description</span><span>Status</span>
+        </div>
+        @for (acc of filtered(); track acc.accountNo + acc.deptNo) {
+          <div class="at-row" [class.selected]="selected()?.accountNo === acc.accountNo && selected()?.deptNo === acc.deptNo"
+               (click)="selectAccount(acc)">
+            <span class="acc-no">{{ acc.accountNo }}</span>
+            <span class="dept-no">{{ acc.deptNo }}</span>
+            <span class="acc-desc">{{ acc.description }}</span>
+            <span class="acc-status" [class.inactive]="acc.status === 'inactive'">
+              {{ acc.status }}
+            </span>
+          </div>
+        }
+        @if (filtered().length === 0) {
+          <div class="no-results">No accounts match your search</div>
+        }
+      </div>
+    </div>
+
+    <!-- RIGHT — Detail + Transactions -->
+    <div class="detail-panel">
+      @if (!selected()) {
+        <div class="empty-detail">
+          <span class="material-icons">account_tree</span>
+          <p>Select an account from the list to view details and transactions</p>
+          <span class="tip">💡 Try saying "Maya, show Agni Test transactions"</span>
+        </div>
+      } @else {
+        <!-- Account header -->
+        <div class="acct-header">
+          <div class="acct-badge">{{ selected()!.accountNo }}</div>
+          <div>
+            <div class="acct-name">{{ selected()!.description }}</div>
+            <div class="acct-meta">Dept {{ selected()!.deptNo }} · {{ selected()!.status | titlecase }}</div>
+          </div>
+          <div class="acct-balance">
+            <div class="bal-label">Current Balance</div>
+            <div class="bal-value">{{ formatCurrency(selected()!.balance) }}</div>
+          </div>
+        </div>
+
+        <!-- Date range + load button -->
+        <div class="tx-filters">
+          <div class="filter-group">
+            <label>From</label>
+            <input type="date" [value]="dateFrom()" (change)="dateFrom.set($any($event.target).value)" />
+          </div>
+          <div class="filter-group">
+            <label>To</label>
+            <input type="date" [value]="dateTo()" (change)="dateTo.set($any($event.target).value)" />
+          </div>
+          <button class="btn-load" (click)="loadTransactions()" [disabled]="txLoading()">
+            @if (txLoading()) {
+              <span class="spin"></span> Loading…
+            } @else {
+              <span class="material-icons">sync</span> Load Transactions
+            }
+          </button>
+        </div>
+
+        <!-- Quick date presets -->
+        <div class="date-presets">
+          <button (click)="dateFrom.set('2026-04-01'); dateTo.set('2026-04-30'); loadTransactions()">April 2026</button>
+          <button (click)="dateFrom.set('2026-03-01'); dateTo.set('2026-03-31'); loadTransactions()">March 2026</button>
+          <button (click)="dateFrom.set('2026-01-01'); dateTo.set('2026-04-30'); loadTransactions()">YTD 2026</button>
+          <button (click)="dateFrom.set('2025-01-01'); dateTo.set('2025-12-31'); loadTransactions()">FY 2025</button>
+        </div>
+
+        <!-- Transactions -->
+        @if (showTx()) {
+          <div class="tx-summary">
+            <div class="tsum-chip">
+              <span class="material-icons">receipt_long</span>
+              {{ txSummary.count }} transactions
+            </div>
+            <div class="tsum-chip debit">
+              <span class="material-icons">arrow_upward</span>
+              Debits: {{ formatCurrency(txSummary.totalDebit) }}
+            </div>
+            <div class="tsum-chip credit">
+              <span class="material-icons">arrow_downward</span>
+              Credits: {{ formatCurrency(txSummary.totalCredit) }}
+            </div>
+          </div>
+
+          <div class="tx-table">
+            <div class="tx-head">
+              <span>Date</span><span>Type</span><span>Description</span>
+              <span>Debit</span><span>Credit</span><span>Balance</span>
+            </div>
+            @for (tx of transactions; track tx.ref) {
+              <div class="tx-row">
+                <span class="tx-date">{{ tx.date }}</span>
+                <span class="tx-type" [class.credit]="tx.type === 'Credit'" [class.debit]="tx.type === 'Debit'">
+                  {{ tx.type }}
+                </span>
+                <span class="tx-desc">{{ tx.description }}</span>
+                <span class="tx-debit">{{ formatCurrency(tx.debit) }}</span>
+                <span class="tx-credit">{{ formatCurrency(tx.credit) }}</span>
+                <span class="tx-bal">{{ formatCurrency(tx.balance) }}</span>
+              </div>
+            }
+          </div>
+        } @else if (!txLoading()) {
+          <div class="tx-prompt">
+            <span class="material-icons">receipt_long</span>
+            <p>Select a date range and click <strong>Load Transactions</strong></p>
+          </div>
+        }
+      }
+    </div>
+
+  </div>
+</div>

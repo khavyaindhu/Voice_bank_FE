@@ -1,4 +1,4 @@
-<div class="layout" [class.sidebar-collapsed]="!sidebarOpen()">
+<div class="layout" [class.sidebar-collapsed]="!sidebarOpen()" [class.staff-mode]="role() === 'staff'">
 
   <!-- Top Navbar -->
   <header class="navbar">
@@ -11,9 +11,23 @@
         <span class="brand-bank">Bank</span>
       </div>
     </div>
+
     <div class="navbar-center">
       <span class="poc-badge">POC Demo</span>
+
+      <!-- Role Toggle -->
+      <div class="role-toggle">
+        <button class="role-btn" [class.active]="role() === 'customer'" (click)="switchRole('customer')">
+          <span class="material-icons">person</span>
+          Customer
+        </button>
+        <button class="role-btn" [class.active]="role() === 'staff'" (click)="switchRole('staff')">
+          <span class="material-icons">badge</span>
+          Bank Staff
+        </button>
+      </div>
     </div>
+
     <div class="navbar-right">
       <span class="material-icons notify-icon">notifications_none</span>
       <div class="user-menu">
@@ -28,13 +42,24 @@
 
   <!-- Sidebar -->
   <aside class="sidebar">
+    <!-- Role label -->
+    <div class="sidebar-role-label">
+      @if (role() === 'staff') {
+        <span class="material-icons">badge</span>
+        <span>Bank Staff Portal</span>
+      } @else {
+        <span class="material-icons">person</span>
+        <span>Customer Portal</span>
+      }
+    </div>
+
     <nav>
       @for (item of navItems; track item.route) {
         @if (!item.children) {
           <a class="nav-item"
              [routerLink]="item.route"
              routerLinkActive="active"
-             [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }">
+             [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' || item.route === '/staff/dashboard' }">
             <span class="material-icons">{{ item.icon }}</span>
             <span class="nav-label">{{ item.label }}</span>
           </a>
@@ -68,6 +93,6 @@
   </main>
 
   <!-- Chatbot -->
-  <app-chatbot />
+  <app-chatbot [role]="role()" />
 
 </div>

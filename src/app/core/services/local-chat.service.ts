@@ -223,6 +223,8 @@ function getScreenLabel(screen: string): string {
     'payments/card': 'Card Payment', 'payments/history': 'Transaction History',
     'accounts': 'Accounts', 'payees': 'Quick Pay', 'cards': 'Cards',
     'loans': 'Loans', 'loans/apply': 'Loan Application',
+    'staff/dashboard': 'Staff Dashboard', 'staff/customers': 'Customer Search',
+    'staff/fms': 'FMS Account Lookup', 'staff/cards': 'Card Services', 'staff/reports': 'Reports',
   };
   return map[screen] ?? screen;
 }

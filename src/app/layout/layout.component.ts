@@ -1,8 +1,10 @@
 import { Component, signal } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../core/services/auth.service';
 import { ChatbotComponent } from '../shared/chatbot/chatbot.component';
+
+export type AppRole = 'customer' | 'staff';
 
 interface NavItem {
   label: string;
@@ -19,38 +21,49 @@ interface NavItem {
   styleUrl: './layout.component.scss',
 })
 export class LayoutComponent {
-  sidebarOpen = signal(true);
+  sidebarOpen      = signal(true);
   paymentsExpanded = signal(false);
+  role             = signal<AppRole>('customer');
 
-  navItems: NavItem[] = [
-    { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
-    { label: 'Accounts', icon: 'account_balance', route: '/accounts' },
+  readonly customerNav: NavItem[] = [
+    { label: 'Dashboard',  icon: 'dashboard',       route: '/dashboard' },
+    { label: 'Accounts',   icon: 'account_balance',  route: '/accounts' },
     {
       label: 'Payments', icon: 'payments', route: '/payments',
       children: [
         { label: 'ACH Transfer', route: '/payments/ach' },
         { label: 'Wire Transfer', route: '/payments/wire' },
-        { label: 'Zelle', route: '/payments/zelle' },
-        { label: 'Card Payment', route: '/payments/card' },
-        { label: 'History', route: '/payments/history' },
+        { label: 'Zelle',         route: '/payments/zelle' },
+        { label: 'Card Payment',  route: '/payments/card' },
+        { label: 'History',       route: '/payments/history' },
       ],
     },
-    { label: 'Quick Pay', icon: 'contacts', route: '/payees' },
-    { label: 'Cards', icon: 'credit_card', route: '/cards' },
-    { label: 'Loans', icon: 'home', route: '/loans' },
+    { label: 'Quick Pay', icon: 'contacts',     route: '/payees' },
+    { label: 'Cards',     icon: 'credit_card',  route: '/cards' },
+    { label: 'Loans',     icon: 'home',         route: '/loans' },
   ];
 
-  constructor(public auth: AuthService) {}
+  readonly staffNav: NavItem[] = [
+    { label: 'Staff Dashboard',   icon: 'space_dashboard',  route: '/staff/dashboard' },
+    { label: 'Customer Search',   icon: 'manage_search',    route: '/staff/customers' },
+    { label: 'FMS Accounts',      icon: 'account_tree',     route: '/staff/fms' },
+    { label: 'Card Services',     icon: 'credit_card',      route: '/staff/cards' },
+    { label: 'Reports',           icon: 'bar_chart',        route: '/staff/reports' },
+  ];
 
-  toggleSidebar(): void {
-    this.sidebarOpen.update(v => !v);
+  get navItems(): NavItem[] {
+    return this.role() === 'staff' ? this.staffNav : this.customerNav;
   }
 
-  togglePayments(): void {
-    this.paymentsExpanded.update(v => !v);
-  }
+  constructor(public auth: AuthService, private router: Router) {}
 
-  logout(): void {
-    this.auth.logout();
+  toggleSidebar(): void  { this.sidebarOpen.update(v => !v); }
+  togglePayments(): void { this.paymentsExpanded.update(v => !v); }
+  logout(): void         { this.auth.logout(); }
+
+  switchRole(r: AppRole): void {
+    this.role.set(r);
+    this.paymentsExpanded.set(false);
+    this.router.navigate([r === 'staff' ? '/staff/dashboard' : '/dashboard']);
   }
 }

@@ -1,0 +1,111 @@
+<div class="page-wrap">
+
+  <div class="page-header">
+    <div>
+      <h2><span class="material-icons">manage_search</span> Customer Search</h2>
+      <p>Find customers by name, email, ID or phone number</p>
+    </div>
+    <div class="header-hint">
+      <span class="material-icons">record_voice_over</span>
+      Say "Maya, look up customer Vijaya"
+    </div>
+  </div>
+
+  <div class="split-layout">
+
+    <!-- LEFT — Search results -->
+    <div class="search-panel">
+      <div class="search-wrap">
+        <span class="material-icons">search</span>
+        <input class="search-input" type="text" placeholder="Search by name, email, ID…"
+               [value]="searchQ()" (input)="searchQ.set($any($event.target).value)" />
+        @if (searchQ()) {
+          <button class="clear-btn" (click)="searchQ.set('')">
+            <span class="material-icons">close</span>
+          </button>
+        }
+      </div>
+
+      <div class="results-count">{{ filtered().length }} customers found</div>
+
+      <div class="customer-list">
+        @for (c of filtered(); track c.id) {
+          <div class="customer-row" [class.selected]="selected()?.id === c.id" (click)="select(c)">
+            <div class="cust-avatar" [class.business]="c.type === 'business'">
+              {{ c.name[0] }}
+            </div>
+            <div class="cust-info">
+              <div class="cust-name">{{ c.name }}</div>
+              <div class="cust-meta">{{ c.id }} · {{ c.email }}</div>
+            </div>
+            <div class="cust-status status-{{ statusColor(c.status) }}">{{ c.status }}</div>
+          </div>
+        }
+        @if (filtered().length === 0) {
+          <div class="no-results">No customers match "{{ searchQ() }}"</div>
+        }
+      </div>
+    </div>
+
+    <!-- RIGHT — Customer detail -->
+    <div class="detail-panel">
+      @if (!selected()) {
+        <div class="empty-detail">
+          <span class="material-icons">person_search</span>
+          <p>Select a customer to view their profile and accounts</p>
+          <span class="tip">💡 Try saying "Maya, search customer Ramesh"</span>
+        </div>
+      } @else {
+        <div class="cust-header">
+          <div class="cust-avatar-lg" [class.business]="selected()!.type === 'business'">
+            {{ selected()!.name[0] }}
+          </div>
+          <div class="cust-header-info">
+            <div class="cust-name-lg">{{ selected()!.name }}</div>
+            <div class="cust-sub">{{ selected()!.type | titlecase }} · Customer since {{ selected()!.since | date:'MMM yyyy' }}</div>
+            <div class="cust-contact">
+              <span><span class="material-icons">email</span>{{ selected()!.email }}</span>
+              <span><span class="material-icons">phone</span>{{ selected()!.phone }}</span>
+            </div>
+          </div>
+          <div class="cust-status-lg status-{{ statusColor(selected()!.status) }}">
+            {{ selected()!.status | titlecase }}
+          </div>
+        </div>
+
+        <div class="section-label">Accounts</div>
+        <div class="accounts-grid">
+          @for (acc of selected()!.accounts; track acc.masked) {
+            <div class="acc-card">
+              <div class="acc-type">
+                <span class="material-icons">account_balance</span>
+                {{ acc.type }}
+              </div>
+              <div class="acc-masked">{{ acc.masked }}</div>
+              <div class="acc-balance">{{ fmt(acc.balance) }}</div>
+            </div>
+          }
+        </div>
+
+        <div class="section-label">Total Portfolio</div>
+        <div class="total-row">
+          <span>Total Balance across {{ selected()!.accounts.length }} accounts</span>
+          <strong>{{ fmt(totalBalance(selected()!)) }}</strong>
+        </div>
+
+        <div class="action-row">
+          <button class="act-btn">
+            <span class="material-icons">receipt_long</span> View Transactions
+          </button>
+          <button class="act-btn">
+            <span class="material-icons">credit_card</span> Card Services
+          </button>
+          <button class="act-btn warn" [disabled]="selected()!.status === 'frozen'">
+            <span class="material-icons">lock</span> Freeze Account
+          </button>
+        </div>
+      }
+    </div>
+
+  </div>
+</div>

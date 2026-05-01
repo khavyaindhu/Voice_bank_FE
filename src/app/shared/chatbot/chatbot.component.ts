@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, signal, ViewChild, ElementRef, AfterViewChecked, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, ViewChild, ElementRef, AfterViewChecked, computed, Input } from '@angular/core';
+import type { AppRole } from '../../layout/layout.component';
 import { lastValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -50,6 +51,8 @@ interface QuickAction {
   styleUrl: './chatbot.component.scss',
 })
 export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
+  @Input() role: AppRole = 'customer';
+
   @ViewChild('messagesContainer') messagesContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('inputField') inputField!: ElementRef<HTMLInputElement>;
 
@@ -104,17 +107,24 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   screenLabel = computed(() => {
     const labels: Record<string, string> = {
-      'dashboard': 'Dashboard',
-      'payments/ach': 'ACH Transfer',
-      'payments/wire': 'Wire Transfer',
-      'payments/zelle': 'Zelle',
-      'payments/card': 'Card Payment',
-      'payments/history': 'Transaction History',
-      'accounts': 'Accounts',
-      'payees': 'Quick Pay',
-      'cards': 'Cards',
-      'loans': 'Loans',
-      'loans/apply': 'Loan Application',
+      // Customer screens
+      'dashboard':          'Dashboard',
+      'payments/ach':       'ACH Transfer',
+      'payments/wire':      'Wire Transfer',
+      'payments/zelle':     'Zelle',
+      'payments/card':      'Card Payment',
+      'payments/history':   'Transaction History',
+      'accounts':           'Accounts',
+      'payees':             'Quick Pay',
+      'cards':              'Cards',
+      'loans':              'Loans',
+      'loans/apply':        'Loan Application',
+      // Staff screens
+      'staff/dashboard':    'Staff Dashboard',
+      'staff/customers':    'Customer Search',
+      'staff/fms':          'FMS Account Lookup',
+      'staff/cards':        'Card Services',
+      'staff/reports':      'Reports',
     };
     return labels[this.screenCtx.currentScreen()] ?? this.screenCtx.currentScreen();
   });
@@ -159,9 +169,11 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   private addWelcome(): void {
     const name = this.auth.currentUser()?.fullName?.split(' ')[0] ?? 'there';
-    this.addAssistantMessage(
-      `Hi ${name}! 👋 I'm **Maya**, your U.S. Bank AI assistant.\n\nI can see you're on the **${this.screenLabel()}** screen. I'm here to help you with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balance enquiries\n- Loan applications & EMI details\n- Account & RD information\n\nWhat can I help you with today?`
-    );
+    const isStaff = this.role === 'staff';
+    const greeting = isStaff
+      ? `Hi ${name}! 👋 I'm **Maya**, your U.S. Bank Staff Assistant.\n\nYou're on the **${this.screenLabel()}** screen. I can help you with:\n- FMS account & transaction lookup\n- Customer search by name or ID\n- Card freeze / dispute queries\n- ACH batch status & reports\n\nTry: _"Show Agni Test transactions for April"_ or _"Search customer Vijaya"_`
+      : `Hi ${name}! 👋 I'm **Maya**, your U.S. Bank AI assistant.\n\nI can see you're on the **${this.screenLabel()}** screen. I'm here to help you with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balance enquiries\n- Loan applications & EMI details\n- Account & RD information\n\nWhat can I help you with today?`;
+    this.addAssistantMessage(greeting);
   }
 
   // ── Guided Flow Methods ──────────────────────────────────────────
