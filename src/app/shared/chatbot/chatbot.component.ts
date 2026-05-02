@@ -542,7 +542,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     //           "show current month transactions for Currency", "load Agni transactions for March"
     const fmsRx = /(?:show|open|find|get|load|pull\s*up)\s+(?:fms\s+(?:account\s+)?)?(.+?)\s+(?:transactions?|account|ledger|entries)/i;
     const fmsMatch = msg.match(fmsRx);
-    if ((fmsMatch || /fms|ledger|account\s+\d{8}/i.test(lower)) &&
+    if ((fmsMatch || /fms|ledger|account\s+\d{5,8}/i.test(lower)) &&
         !/customer|client/i.test(lower) &&
         !/summary|report|\bfor\s+[a-z]/i.test(lower) &&
         !/last\s+(?:week|month)|current\s+month|ytd/i.test(lower)) {
@@ -551,7 +551,9 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         searchTerm = fmsMatch[1].trim();
       } else {
         // "open FMS account 91000038" — extract account number or keyword
-        const numMatch = lower.match(/\b(91\d{6})\b/);
+        // Allow 6-8 digit account numbers (speech recognition sometimes drops a zero
+        // when user says "double zero" — e.g. "9100038" instead of "91000038")
+        const numMatch = lower.match(/\b(91\d{4,6})\b/);
         const keyMatch = lower.match(/(?:fms\s+(?:account\s+)?|account\s+)([a-z0-9 &]+)/i);
         searchTerm = numMatch?.[1] ?? keyMatch?.[1]?.trim() ?? '';
       }

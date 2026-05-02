@@ -45,10 +45,19 @@ export class FmsLookupComponent implements OnInit {
       const q = this.staffCtx.fmsQuery();
       if (!q) return;
       this.searchQ.set(q);
-      const match = this.accounts.find(a =>
-        a.description.toLowerCase().includes(q.toLowerCase()) ||
-        a.accountNo.includes(q)
-      );
+      const match = this.accounts.find(a => {
+        const desc = a.description.toLowerCase();
+        const ql   = q.toLowerCase().trim();
+        // Description match
+        if (desc.includes(ql)) return true;
+        // Exact account number substring match
+        if (a.accountNo.includes(q)) return true;
+        // Fuzzy numeric match: speech recognition sometimes drops a zero when
+        // user says "double zero" → e.g. "9100038" heard instead of "91000038".
+        // Accept if first 5 digits match AND last 2 digits match.
+        if (/^\d{5,7}$/.test(q) && a.accountNo.startsWith(q.slice(0, 5)) && a.accountNo.endsWith(q.slice(-2))) return true;
+        return false;
+      });
       if (match) {
         this.selected.set(match);
         this.showTx.set(false);
@@ -105,11 +114,14 @@ export class FmsLookupComponent implements OnInit {
   filtered = computed(() => {
     const q = this.searchQ().toLowerCase().trim();
     if (!q) return this.accounts;
-    return this.accounts.filter(a =>
-      a.accountNo.includes(q) ||
-      a.description.toLowerCase().includes(q) ||
-      a.deptNo.includes(q)
-    );
+    return this.accounts.filter(a => {
+      if (a.accountNo.includes(q))                       return true;
+      if (a.description.toLowerCase().includes(q))       return true;
+      if (a.deptNo.includes(q))                          return true;
+      // Fuzzy numeric: handles one dropped zero from speech recognition
+      if (/^\d{5,7}$/.test(q) && a.accountNo.startsWith(q.slice(0, 5)) && a.accountNo.endsWith(q.slice(-2))) return true;
+      return false;
+    });
   });
 
   get transactions(): FmsTransaction[] {
