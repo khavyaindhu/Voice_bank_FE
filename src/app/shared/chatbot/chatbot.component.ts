@@ -512,10 +512,11 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       else if (/ytd|year\s*to\s*date|this\s*year/i.test(lower))          reportPreset = 'ytd';
 
       // Detect customer — two patterns:
-      // 1. "transactions for [name]..."   2. "show [name] transactions..."
+      // 1. "transactions for [name/id]..."   2. "show [name/id] transactions..."
+      // Allow digits so speech-spelled IDs like "c u s t 003" are captured fully.
       const custForMatch =
-        lower.match(/transactions?\s+for\s+([a-z][a-z ]{1,30}?)(?:\s+(?:current|last|this|ytd|year|month|week|summary)|$)/i) ??
-        lower.match(/show\s+([a-z][a-z ]{2,30}?)\s+transactions?/i);
+        lower.match(/transactions?\s+for\s+([a-z][a-z0-9 ]{1,30}?)(?:\s+(?:current|last|this|ytd|year|month|week|summary)|$)/i) ??
+        lower.match(/show\s+([a-z][a-z0-9 ]{2,30}?)\s+transactions?/i);
       const reportCustomer = custForMatch?.[1]?.trim() ?? '';
 
       // Detect section

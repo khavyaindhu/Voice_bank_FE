@@ -113,10 +113,16 @@ export class StaffReportsComponent implements OnInit {
       this.activeSection.set(section);
 
       // Apply customer filter for transactions
+      // Match by name OR by customer ID (with normalisation so speech-spelled
+      // IDs like "c u s t 003" collapse to "cust003" matching "CUST-003").
       const customerName = this.staffCtx.reportCustomer();
       if (customerName && section === 'transactions') {
+        const norm = (s: string) => s.replace(/[\s\-_]/g, '').toLowerCase();
+        const qn   = norm(customerName);
         const match = this.customers().find(c =>
-          c.name.toLowerCase().includes(customerName.toLowerCase())
+          c.name.toLowerCase().includes(customerName.toLowerCase()) ||
+          norm(c.displayId).includes(qn) ||
+          qn.includes(norm(c.displayId))
         );
         this.txCustFilter.set(match ? match.displayId : 'all');
         this.txPage.set(1);
