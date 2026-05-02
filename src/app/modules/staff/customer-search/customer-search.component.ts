@@ -40,7 +40,7 @@ export class CustomerSearchComponent implements OnInit {
       );
       if (match) this.selected.set(match);
       this.staffCtx.setCustomerSearch(''); // clear after consuming
-    });
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit(): void {}

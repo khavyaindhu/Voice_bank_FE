@@ -56,7 +56,7 @@ export class FmsLookupComponent implements OnInit {
         if (preset) { this.applyPreset(preset); }
       }
       this.staffCtx.setFmsSearch(''); // clear after consuming
-    });
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit(): void {}

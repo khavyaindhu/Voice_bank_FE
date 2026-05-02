@@ -40,7 +40,7 @@ export class StaffCardsComponent implements OnInit {
       if (!tab) return;
       this.activeTab.set(tab);
       this.staffCtx.setCardFilter(''); // clear after consuming
-    });
+    }, { allowSignalWrites: true });
 
     // React to Maya requesting a freeze for a customer
     effect(() => {
@@ -51,7 +51,7 @@ export class StaffCardsComponent implements OnInit {
       if (!cards.length) return; // will re-run when cards signal updates
       this.executeFreezeForCustomer(target);
       this.staffCtx.setCardFreeze(''); // clear after consuming
-    });
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit(): void {

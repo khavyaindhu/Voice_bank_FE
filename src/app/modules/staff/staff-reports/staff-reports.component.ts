@@ -128,7 +128,7 @@ export class StaffReportsComponent implements OnInit {
       if (section === 'departments')  this.loadDepartments();
 
       this.staffCtx.setReport('', '', ''); // clear after consuming
-    });
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit(): void {
