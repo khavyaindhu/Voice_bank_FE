@@ -549,10 +549,14 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       let searchTerm = '';
       if (fmsMatch) {
         searchTerm = fmsMatch[1].trim();
-      } else {
-        // "open FMS account 91000038" — extract account number or keyword
-        // Allow 6-8 digit account numbers (speech recognition sometimes drops a zero
-        // when user says "double zero" — e.g. "9100038" instead of "91000038")
+        // Guard: "open FMS account 910038" falsely captures "FMS" because the
+        // word "account" in the pattern matches the suffix keyword.
+        // Detect this and fall through to number/keyword extraction below.
+        if (/^fms$/i.test(searchTerm)) searchTerm = '';
+      }
+      if (!searchTerm) {
+        // Extract account number — allow 6-8 digits (speech recognition often
+        // drops a zero when user says "double zero", e.g. "910038" → "91000038")
         const numMatch = lower.match(/\b(91\d{4,6})\b/);
         const keyMatch = lower.match(/(?:fms\s+(?:account\s+)?|account\s+)([a-z0-9 &]+)/i);
         searchTerm = numMatch?.[1] ?? keyMatch?.[1]?.trim() ?? '';
