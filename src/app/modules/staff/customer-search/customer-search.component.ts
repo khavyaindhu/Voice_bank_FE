@@ -34,10 +34,7 @@ export class CustomerSearchComponent implements OnInit {
       const q = this.staffCtx.customerQuery();
       if (!q) return;
       this.searchQ.set(q);
-      const match = this.customers.find(c =>
-        c.name.toLowerCase().includes(q.toLowerCase()) ||
-        c.id.toLowerCase().includes(q.toLowerCase())
-      );
+      const match = this.customers.find(c => this.matchesQuery(c, q));
       if (match) this.selected.set(match);
       this.staffCtx.setCustomerSearch(''); // clear after consuming
     }, { allowSignalWrites: true });
@@ -94,15 +91,31 @@ export class CustomerSearchComponent implements OnInit {
     },
   ];
 
-  filtered = computed(() => {
-    const q = this.searchQ().toLowerCase().trim();
-    if (!q) return this.customers;
-    return this.customers.filter(c =>
+  /** Normalise a string for ID comparison: remove spaces, dashes, underscores.
+   *  Speech recognition spells "CUST-003" as "c u s t 003" — stripping
+   *  whitespace/dashes makes both collapse to "cust003" for matching. */
+  private normalizeId(s: string): string {
+    return s.replace(/[\s\-_]/g, '').toLowerCase();
+  }
+
+  matchesQuery(c: Customer, raw: string): boolean {
+    const q     = raw.toLowerCase().trim();
+    const qNorm = this.normalizeId(q);
+    return (
       c.name.toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
+      c.phone.includes(q) ||
       c.id.toLowerCase().includes(q) ||
-      c.phone.includes(q)
+      // Normalised ID match: "c u s t 003" → "cust003" matches "CUST-003" → "cust003"
+      this.normalizeId(c.id).includes(qNorm) ||
+      qNorm.includes(this.normalizeId(c.id))
     );
+  }
+
+  filtered = computed(() => {
+    const q = this.searchQ().trim();
+    if (!q) return this.customers;
+    return this.customers.filter(c => this.matchesQuery(c, q));
   });
 
   select(c: Customer): void { this.selected.set(c); }
