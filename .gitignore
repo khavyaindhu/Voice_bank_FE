@@ -2,4 +2,3 @@ node_modules/
 dist/
 .angular/
 *.log
-src/environments/environment.prod.ts
