@@ -89,6 +89,52 @@ export class CustomerSearchComponent implements OnInit {
         { type: 'Checking', masked: '****5541', balance: 31000 },
       ],
     },
+    {
+      id: 'CUST-007', name: 'James Smith', email: 'james.smith@example.com',
+      phone: '+1-312-555-0210', type: 'individual', since: '2018-04-12', status: 'active',
+      accounts: [
+        { type: 'Checking', masked: '****3301', balance: 18500 },
+        { type: 'Credit',   masked: '****7742', balance: 6800 },
+      ],
+    },
+    {
+      id: 'CUST-008', name: 'Emily Johnson', email: 'emily.johnson@example.com',
+      phone: '+1-646-555-0182', type: 'individual', since: '2021-08-03', status: 'active',
+      accounts: [
+        { type: 'Checking', masked: '****4412', balance: 9200 },
+        { type: 'Credit',   masked: '****6623', balance: 3100 },
+      ],
+    },
+    {
+      id: 'CUST-009', name: 'Michael Jordan', email: 'michael.jordan@example.com',
+      phone: '+1-773-555-0023', type: 'individual', since: '2017-11-20', status: 'active',
+      accounts: [
+        { type: 'Checking', masked: '****8810', balance: 42000 },
+        { type: 'Credit',   masked: '****5530', balance: 11200 },
+      ],
+    },
+    {
+      id: 'CUST-010', name: 'Jake Williams', email: 'jake.williams@example.com',
+      phone: '+1-404-555-0167', type: 'individual', since: '2023-02-14', status: 'frozen',
+      accounts: [
+        { type: 'Checking', masked: '****2209', balance: 0 },
+      ],
+    },
+    {
+      id: 'CUST-011', name: 'Sarah Davis', email: 'sarah.davis@example.com',
+      phone: '+1-602-555-0139', type: 'individual', since: '2019-06-28', status: 'active',
+      accounts: [
+        { type: 'Checking', masked: '****9921', balance: 14700 },
+        { type: 'Credit',   masked: '****1144', balance: 4200 },
+      ],
+    },
+    {
+      id: 'CUST-012', name: 'Robert Brown', email: 'robert.brown@example.com',
+      phone: '+1-503-555-0091', type: 'individual', since: '2016-09-07', status: 'active',
+      accounts: [
+        { type: 'Checking', masked: '****6678', balance: 27300 },
+      ],
+    },
   ];
 
   /** Normalise a string for ID comparison: remove spaces, dashes, underscores.
