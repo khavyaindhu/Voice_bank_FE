@@ -30,7 +30,7 @@ const GO_PREFIX = /^(go\s*to|open|take\s*me\s*to|navigate\s*to|show\s*me|can\s*y
 const INTENTS: { patterns: RegExp[]; response: (ctx: string, accounts?: Account[]) => string }[] = [
   {
     patterns: [/^(hi|hello|hey|good\s*(morning|afternoon|evening))/i],
-    response: (screen) => `Hello! 👋 I'm **Maya**, your U.S. Bank AI assistant.\n\nYou're on the **${getScreenLabel(screen)}** screen. I can help with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balances\n- Loan guidance\n- Account & RD details\n\nWhat can I help you with today?`,
+    response: (screen) => `Hello! 👋 I'm **Maya**, your U.S. Bank Voice assistant.\n\nYou're on the **${getScreenLabel(screen)}** screen. I can help with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balances\n- Loan guidance\n- Account & RD details\n\nWhat can I help you with today?`,
   },
 
   // ── Transfer type guidance ────────────────────────────────────────

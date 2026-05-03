@@ -189,7 +189,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     const isStaff = this.role === 'staff';
     const greeting = isStaff
       ? `Hi ${name}! 👋 I'm **Maya**, your U.S. Bank Staff Assistant.\n\nYou're on the **${this.screenLabel()}** screen. I can help you with:\n- FMS account & transaction lookup\n- Customer search by name or ID\n- Card freeze / dispute queries\n- ACH batch status & reports\n\nTry: _"Show Agni Test transactions for April"_ or _"Search customer Vijaya"_`
-      : `Hi ${name}! 👋 I'm **Maya**, your U.S. Bank AI assistant.\n\nI can see you're on the **${this.screenLabel()}** screen. I'm here to help you with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balance enquiries\n- Loan applications & EMI details\n- Account & RD information\n\nWhat can I help you with today?`;
+      : `Hi ${name}! 👋 I'm **Maya**, your U.S. Bank Voice assistant.\n\nI can see you're on the **${this.screenLabel()}** screen. I'm here to help you with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balance enquiries\n- Loan applications & EMI details\n- Account & RD information\n\nWhat can I help you with today?`;
     this.addAssistantMessage(greeting);
   }
 
