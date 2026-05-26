@@ -612,7 +612,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     // ── Card: Generic navigation ──────────────────────────────────────
-    if (/(?:go\s+to|open|show)\s+card\s+services?/i.test(lower) ||
+    if (/(?:go\s+to|open|show|switch(?:\s+to)?|change(?:\s+to)?|navigate(?:\s+to)?|take\s+me\s+to|move\s+to|jump\s+to|load|visit)\s+(?:the\s+)?card\s+services?(?:\s+(?:tab|page|screen|section))?/i.test(lower) ||
         /card\s+(?:management|admin|lookup)/i.test(lower) ||
         /show\s+(?:all\s+)?cards?$/i.test(lower)) {
       this.addAssistantMessage(`💳 Navigating to **Card Services**...`);
@@ -621,7 +621,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     // ── Staff Dashboard ──────────────────────────────────────────────
-    if (/(?:go\s+to|open|show)\s+(?:staff\s+)?dashboard/i.test(lower) ||
+    if (/(?:go\s+to|open|show|switch(?:\s+to)?|change(?:\s+to)?|navigate(?:\s+to)?|take\s+me\s+to|move\s+to|jump\s+to|load|visit)\s+(?:the\s+)?(?:staff\s+)?dashboard(?:\s+(?:tab|page|screen|section))?/i.test(lower) ||
         /staff\s+(?:home|main|overview)/i.test(lower)) {
       this.addAssistantMessage(`🏠 Navigating to **Staff Dashboard**...`);
       setTimeout(() => this.router.navigate(['/staff/dashboard']), 500);
@@ -629,7 +629,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     // ── Reports ──────────────────────────────────────────────────────
-    if (/(?:go\s+to|open|show)\s+reports?/i.test(lower) ||
+    if (/(?:go\s+to|open|show|switch(?:\s+to)?|change(?:\s+to)?|navigate(?:\s+to)?|take\s+me\s+to|move\s+to|jump\s+to|load|visit)\s+(?:the\s+)?(?:staff\s+)?reports?(?:\s+(?:tab|page|screen|section))?/i.test(lower) ||
         /staff\s+reports?/i.test(lower)) {
       this.addAssistantMessage(`📈 Navigating to **Reports**...`);
       setTimeout(() => this.router.navigate(['/staff/reports']), 500);

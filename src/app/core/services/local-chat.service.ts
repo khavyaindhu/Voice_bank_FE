@@ -9,22 +9,39 @@ export interface LocalChatResult {
 }
 
 // ── Navigation intents ────────────────────────────────────────────
-const NAV_INTENTS: { patterns: RegExp[]; route: string; label: string }[] = [
+const CUSTOMER_NAV_INTENTS: { patterns: RegExp[]; route: string; label: string }[] = [
   { patterns: [/wire/i], route: '/payments/wire', label: 'Wire Transfer' },
   { patterns: [/\bach\b|ach\s*transfer/i], route: '/payments/ach', label: 'ACH Transfer' },
   { patterns: [/zelle/i], route: '/payments/zelle', label: 'Zelle' },
   { patterns: [/card\s*pay/i], route: '/payments/card', label: 'Card Payment' },
-  { patterns: [/history|past\s*trans/i], route: '/payments/history', label: 'Payment History' },
+  { patterns: [/history|past\s*trans|transaction\s*history/i], route: '/payments/history', label: 'Payment History' },
   { patterns: [/dashboard|go\s*home|home\s*page/i], route: '/dashboard', label: 'Dashboard' },
-  { patterns: [/accounts?\s*page|my\s*account|go.*account/i], route: '/accounts', label: 'Accounts' },
-  { patterns: [/quick\s*pay|payees?\s*page|saved.*pay|my\s*payees?|go.*payee/i], route: '/payees', label: 'Quick Pay' },
-  { patterns: [/cards?\s*page|my\s*card|go.*card(?!.*pay)/i], route: '/cards', label: 'Cards' },
-  { patterns: [/loans?\s*page|my\s*loan|go.*loan(?!.*apply)/i], route: '/loans', label: 'Loans' },
+  { patterns: [/accounts?|my\s*account|go.*account/i], route: '/accounts', label: 'Accounts' },
+  { patterns: [/quick\s*pay|payees?|saved.*pay|my\s*payees?|go.*payee/i], route: '/payees', label: 'Quick Pay' },
+  { patterns: [/cards?|my\s*card|go.*card(?!.*pay)/i], route: '/cards', label: 'Cards' },
+  { patterns: [/loans?|my\s*loan|go.*loan(?!.*apply)/i], route: '/loans', label: 'Loans' },
   { patterns: [/apply.*loan|loan.*apply/i], route: '/loans/apply', label: 'Loan Application' },
-  { patterns: [/payments?\s*page|go.*payment/i], route: '/payments/ach', label: 'Payments' },
+  { patterns: [/payments?|go.*payment/i], route: '/payments/ach', label: 'Payments' },
 ];
 
-const GO_PREFIX = /^(go\s*to|open|take\s*me\s*to|navigate\s*to|show\s*me|can\s*you\s*go\s*to|switch\s*to)/i;
+const STAFF_NAV_INTENTS: { patterns: RegExp[]; route: string; label: string }[] = [
+  { patterns: [/staff\s*dashboard|dashboard|home|overview/i], route: '/staff/dashboard', label: 'Staff Dashboard' },
+  { patterns: [/customer\s*search|search\s*customers?|customer\s*lookup|client\s*lookup/i], route: '/staff/customers', label: 'Customer Search' },
+  { patterns: [/\bfms\b|fms\s*accounts?|ledger/i], route: '/staff/fms', label: 'FMS Account Lookup' },
+  { patterns: [/\bcards?\b(?!\s*(?:pay|payment))|card\s*services?|card\s*management|card\s*admin/i], route: '/staff/cards', label: 'Card Services' },
+  { patterns: [/reports?|reporting|analytics/i], route: '/staff/reports', label: 'Reports' },
+];
+
+const GO_PREFIX = /^(?:maya\s+)?(?:(?:can|could|would|will)\s+you\s+)?(?:please\s+|kindly\s+|just\s+)?(?:go\s*to|open|take\s*me\s*to|navigate\s*to|show\s*me|show|switch\s*to|change\s*to|move\s*to|jump\s*to|load|visit|bring\s*up)\b/i;
+
+function normalizeNavMessage(message: string): string {
+  return message
+    .toLowerCase()
+    .replace(/[^\w\s&/-]/g, ' ')
+    .replace(/\b(?:please|kindly|just|the|a|an|tab|screen|page|section|menu|module)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 // ── Banking knowledge responses ───────────────────────────────────
 const INTENTS: { patterns: RegExp[]; response: (ctx: string, accounts?: Account[]) => string }[] = [
@@ -240,10 +257,15 @@ export class LocalChatService {
     // will never reach this method.
 
     // 1. Navigation intent — "go to X" or just the page name after go-prefix
-    const hasGoPrefix = GO_PREFIX.test(lower);
-    if (hasGoPrefix) {
-      for (const nav of NAV_INTENTS) {
-        if (nav.patterns.some(p => p.test(lower))) {
+    const hasNavCue = GO_PREFIX.test(lower) || /\b(?:tab|screen|page|section|menu|module)\b/i.test(lower);
+    if (hasNavCue) {
+      const normalized = normalizeNavMessage(lower);
+      const navIntents = screen.startsWith('staff/')
+        ? [...STAFF_NAV_INTENTS, ...CUSTOMER_NAV_INTENTS]
+        : CUSTOMER_NAV_INTENTS;
+
+      for (const nav of navIntents) {
+        if (nav.patterns.some(p => p.test(normalized))) {
           return {
             text: `Sure! Taking you to **${nav.label}** now. 🚀\n\nFeel free to ask me anything once you're there!`,
             navigateTo: nav.route,
