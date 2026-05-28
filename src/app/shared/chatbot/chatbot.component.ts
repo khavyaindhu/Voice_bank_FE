@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, ViewChild, ElementRef, AfterViewChecked, computed, Input, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, ViewChild, ElementRef, AfterViewChecked, computed, Input, HostListener, NgZone } from '@angular/core';
 import type { AppRole } from '../../layout/layout.component';
 import { lastValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -159,6 +159,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     public payeeSvc: PayeeService,
     private staffCtx: StaffContextService,
     public locale: LocaleService,
+    private ngZone: NgZone,
   ) {}
 
   ngOnInit(): void {
@@ -1013,17 +1014,19 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.recognition.lang = 'en-US';
 
     this.recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results as any[])
-        .map((r: any) => r[0].transcript)
-        .join('');
-      this.inputText.set(transcript);
-      if (event.results[event.results.length - 1].isFinal) {
-        this.isListening.set(false);
-      }
+      this.ngZone.run(() => {
+        const transcript = Array.from(event.results as any[])
+          .map((r: any) => r[0].transcript)
+          .join('');
+        this.inputText.set(transcript);
+        if (event.results[event.results.length - 1].isFinal) {
+          this.isListening.set(false);
+        }
+      });
     };
 
-    this.recognition.onerror = () => this.isListening.set(false);
-    this.recognition.onend = () => this.isListening.set(false);
+    this.recognition.onerror = () => this.ngZone.run(() => this.isListening.set(false));
+    this.recognition.onend = () => this.ngZone.run(() => this.isListening.set(false));
   }
 
   toggleVoiceInput(): void {
