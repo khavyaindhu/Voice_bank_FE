@@ -407,6 +407,67 @@
   margin-top: 6px;
 }
 
+// ── Language Selector ─────────────────────────────────────────────────
+.lang-selector {
+  position: relative;
+}
+
+.lang-btn {
+  background: rgba(255,255,255,.15);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  line-height: 1;
+
+  .lang-flag { font-size: 16px; }
+  .material-icons { font-size: 12px; opacity: .8; }
+  &:hover { background: rgba(255,255,255,.28); }
+}
+
+.lang-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.18);
+  border: 1px solid var(--usb-gray-200);
+  z-index: 200;
+  min-width: 148px;
+  overflow: hidden;
+  animation: fadeIn .15s ease;
+}
+
+.lang-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: white;
+  padding: 9px 13px;
+  font-size: 13px;
+  color: var(--usb-gray-800);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+
+  &:hover { background: var(--usb-gray-50); }
+  &.active { background: #EEF2FF; color: var(--usb-navy); font-weight: 600; }
+  & + & { border-top: 1px solid var(--usb-gray-100); }
+
+  .lang-check {
+    font-size: 14px;
+    color: #22C55E;
+    margin-left: auto;
+  }
+}
+
 // ── Emergency bubble wrapper — no padding, no background ─────────────
 .emergency-bubble {
   padding: 0 !important;

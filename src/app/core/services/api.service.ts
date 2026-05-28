@@ -66,6 +66,11 @@ export class ApiService {
     return this.http.post<ChatResponse>(`${this.base}/chat/message`, payload);
   }
 
+  // Translation
+  translateText(text: string, language: string): Observable<TranslateResponse> {
+    return this.http.post<TranslateResponse>(`${this.base}/translate`, { text, language });
+  }
+
   // ── Staff: Cards ────────────────────────────────────────────────────────
   getStaffCards(filters?: { status?: string; customerId?: string; search?: string }): Observable<StaffCard[]> {
     let params = new HttpParams();
@@ -201,6 +206,7 @@ export interface CardPaymentPayload { fromAccount: string; cardId: string; payme
 export interface LoanApplicationPayload { loanType: string; principalAmount: number; tenureMonths: number; }
 export interface ChatPayload { message: string; screenContext: string; accountSummary?: object; sessionId?: string; }
 export interface ChatResponse { response: string; sessionId: string; navigateTo?: string | null; }
+export interface TranslateResponse { translatedText: string; language: string; }
 export interface TxResponse { message: string; transaction: Transaction; }
 
 export interface ApiPayee {

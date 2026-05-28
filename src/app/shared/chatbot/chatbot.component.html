@@ -25,6 +25,28 @@
           <span class="material-icons">location_on</span>
           {{ screenLabel() }}
         </div>
+        <!-- Language selector -->
+        <div class="lang-selector" (click)="$event.stopPropagation()">
+          <button class="lang-btn" (click)="toggleLangMenu()" [title]="'Language: ' + locale.selected().label">
+            <span class="lang-flag">{{ locale.selected().flag }}</span>
+            <span class="material-icons">expand_more</span>
+          </button>
+          @if (showLangMenu()) {
+            <div class="lang-dropdown">
+              @for (lang of locale.languages; track lang.code) {
+                <button class="lang-option"
+                        [class.active]="locale.selected().code === lang.code"
+                        (click)="selectLanguage(lang.code)">
+                  <span>{{ lang.flag }}</span>
+                  <span>{{ lang.label }}</span>
+                  @if (locale.selected().code === lang.code) {
+                    <span class="material-icons lang-check">check</span>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
         <!-- Auto-speak toggle -->
         <button (click)="toggleAutoSpeak()"
           [class.active]="autoSpeak()"

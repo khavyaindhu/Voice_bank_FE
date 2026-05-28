@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, ViewChild, ElementRef, AfterViewChecked, computed, Input } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, ViewChild, ElementRef, AfterViewChecked, computed, Input, HostListener } from '@angular/core';
 import type { AppRole } from '../../layout/layout.component';
 import { lastValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -14,6 +14,7 @@ import { LocalChatService } from '../../core/services/local-chat.service';
 import { EmergencyCardService } from '../../core/services/emergency-card.service';
 import { PayeeService, Payee } from '../../core/services/payee.service';
 import { StaffContextService } from '../../core/services/staff-context.service';
+import { LocaleService } from '../../core/services/locale.service';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -66,6 +67,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   isListening = signal(false);
   isSpeaking = signal(false);
   autoSpeak = signal(false);
+  showLangMenu = signal(false);
   accounts = signal<Account[]>([]);
 
   // Guided form-fill flow state
@@ -156,6 +158,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     public emergencyCard: EmergencyCardService,
     public payeeSvc: PayeeService,
     private staffCtx: StaffContextService,
+    public locale: LocaleService,
   ) {}
 
   ngOnInit(): void {
@@ -184,13 +187,16 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
-  private addWelcome(): void {
+  private async addWelcome(): Promise<void> {
     const name = this.auth.currentUser()?.fullName?.split(' ')[0] ?? 'there';
     const isStaff = this.role === 'staff';
     const greeting = isStaff
       ? `Hi ${name}! 👋 I'm **Maya**, your U.S. Bank Staff Assistant.\n\nYou're on the **${this.screenLabel()}** screen. I can help you with:\n- FMS account & transaction lookup\n- Customer search by name or ID\n- Card freeze / dispute queries\n- ACH batch status & reports\n\nTry: _"Show Agni Test transactions for April"_ or _"Search customer Vijaya"_`
       : `Hi ${name}! 👋 I'm **Maya**, your U.S. Bank Voice assistant.\n\nI can see you're on the **${this.screenLabel()}** screen. I'm here to help you with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balance enquiries\n- Loan applications & EMI details\n- Account & RD information\n\nWhat can I help you with today?`;
-    this.addAssistantMessage(greeting);
+    this.isLoading.set(true);
+    const displayText = await this.doTranslate(greeting);
+    this.isLoading.set(false);
+    this.addAssistantMessage(displayText);
   }
 
   // ── Guided Flow Methods ──────────────────────────────────────────
@@ -303,7 +309,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     return true;
   }
 
-  sendMessage(text?: string): void {
+  async sendMessage(text?: string): Promise<void> {
     const msg = (text ?? this.inputText()).trim();
     if (!msg || this.isLoading()) return;
 
@@ -381,7 +387,10 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     // ── Process locally — no backend call needed ──────────────────
     const result = this.localChat.process(msg, screen, this.accounts());
-    this.addAssistantMessage(result.text);
+    this.isLoading.set(true);
+    const displayText = await this.doTranslate(result.text);
+    this.isLoading.set(false);
+    this.addAssistantMessage(displayText);
     if (result.navigateTo) {
       setTimeout(() => this.router.navigate([result.navigateTo!]), 1000);
     }
@@ -1038,12 +1047,37 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (this.isSpeaking()) { this.synth.cancel(); this.isSpeaking.set(false); return; }
     const plain = content.replace(/[#*`_~\[\]()]/g, '').trim();
     const utterance = new SpeechSynthesisUtterance(plain);
-    utterance.lang = 'en-US';
+    utterance.lang = this.locale.selected().speechCode;
     utterance.rate = 0.95;
     utterance.onstart = () => this.isSpeaking.set(true);
     utterance.onend = () => this.isSpeaking.set(false);
     utterance.onerror = () => this.isSpeaking.set(false);
     this.synth.speak(utterance);
+  }
+
+  // ── Language Selector ────────────────────────────────────────
+  toggleLangMenu(): void {
+    this.showLangMenu.update(v => !v);
+  }
+
+  selectLanguage(code: string): void {
+    this.locale.setLanguage(code);
+    this.showLangMenu.set(false);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.showLangMenu.set(false);
+  }
+
+  private async doTranslate(text: string): Promise<string> {
+    if (this.locale.isEnglish) return text;
+    try {
+      const result = await lastValueFrom(this.api.translateText(text, this.locale.selected().code));
+      return result.translatedText;
+    } catch {
+      return text; // fallback to English on error
+    }
   }
 
   private scrollToBottom(): void {
