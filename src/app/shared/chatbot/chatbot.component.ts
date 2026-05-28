@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { marked } from 'marked';
-import { ApiService, Account } from '../../core/services/api.service';
+import { ApiService, Account, TtsResponse } from '../../core/services/api.service';
 import { ScreenContextService } from '../../core/services/screen-context.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FormFillService } from '../../core/services/form-fill.service';
@@ -179,6 +179,8 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   ngOnDestroy(): void {
     this.recognition?.abort();
     this.synth.cancel();
+    this.currentAudio?.pause();
+    this.currentAudio = null;
   }
 
   ngAfterViewChecked(): void {
@@ -1209,36 +1211,70 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   speakMessage(content: string): void {
-    if (this.isSpeaking()) { this.synth.cancel(); this.isSpeaking.set(false); return; }
-
-    // Strip markdown formatting so the TTS reads clean text
-    const plain = content
-      .replace(/\*\*(.*?)\*\*/g, '$1')   // bold
-      .replace(/\*(.*?)\*/g, '$1')        // italic
-      .replace(/`([^`]+)`/g, '$1')        // inline code
-      .replace(/#{1,6}\s/g, '')           // headings
-      .replace(/[_~\[\]()]/g, '')         // misc symbols
-      .replace(/^\s*[-•]\s/gm, '')        // bullet points
-      .trim();
-
-    const lang      = this.locale.selected();
-    const utterance = new SpeechSynthesisUtterance(plain);
-    utterance.lang  = lang.speechCode;
-
-    // Explicitly pick the best native voice so we get Google हिन्दी,
-    // Google தமிழ், Google ಕನ್ನಡ, etc. instead of a low-quality fallback
-    const voice = this.pickVoice(lang.speechCode);
-    if (voice) {
-      utterance.voice = voice;
-      console.debug('[Maya TTS] voice selected:', voice.name, '|', voice.lang);
-    } else {
-      console.debug('[Maya TTS] no native voice found for', lang.speechCode, '— using browser default');
+    if (this.isSpeaking()) {
+      this.synth.cancel();
+      this.currentAudio?.pause();
+      this.currentAudio = null;
+      this.isSpeaking.set(false);
+      return;
     }
 
-    // Slightly slower rate for non-Latin scripts improves clarity and naturalness
-    utterance.rate  = lang.code === 'en' ? 0.95 : 0.82;
-    utterance.pitch = 1.0;
+    // Strip markdown so TTS reads clean text
+    const plain = content
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/[_~\[\]()]/g, '')
+      .replace(/^\s*[-•]\s/gm, '')
+      .trim();
 
+    const lang = this.locale.selected();
+    this.isSpeaking.set(true);
+
+    // ── Try Google Cloud TTS first (native neural voices) ──────────
+    this.api.synthesizeSpeech(plain, lang.code).subscribe({
+      next: (res: TtsResponse) => {
+        if (res.fallback || !res.audioContent) {
+          // BE says Google TTS not configured — use browser fallback
+          console.debug('[Maya TTS] Google TTS not configured, using browser voice');
+          this.speakWithBrowser(plain, lang.speechCode);
+          return;
+        }
+        console.debug('[Maya TTS] Google Cloud TTS voice:', res.voiceName);
+        // Decode base64 MP3 and play via HTML5 Audio
+        const audio = new Audio(`data:audio/mp3;base64,${res.audioContent}`);
+        this.currentAudio = audio;
+        audio.playbackRate = lang.code === 'en' ? 1.0 : 0.9;
+        audio.onended  = () => { this.isSpeaking.set(false); this.currentAudio = null; };
+        audio.onerror  = () => { this.isSpeaking.set(false); this.currentAudio = null; };
+        audio.play().catch(() => {
+          // Auto-play blocked — fall back to Web Speech
+          this.speakWithBrowser(plain, lang.speechCode);
+        });
+      },
+      error: () => {
+        // Network error or 5xx — fall back to Web Speech API
+        console.debug('[Maya TTS] Google TTS request failed, using browser voice');
+        this.speakWithBrowser(plain, lang.speechCode);
+      },
+    });
+  }
+
+  /** HTML5 Audio element used for Google Cloud TTS playback */
+  private currentAudio: HTMLAudioElement | null = null;
+
+  /** Fallback: use the browser's Web Speech API with the best available voice */
+  private speakWithBrowser(plain: string, speechCode: string): void {
+    const utterance = new SpeechSynthesisUtterance(plain);
+    utterance.lang  = speechCode;
+    const voice = this.pickVoice(speechCode);
+    if (voice) {
+      utterance.voice = voice;
+      console.debug('[Maya TTS] browser voice:', voice.name);
+    }
+    utterance.rate  = speechCode.startsWith('en') ? 0.95 : 0.82;
+    utterance.pitch = 1.0;
     utterance.onstart = () => this.isSpeaking.set(true);
     utterance.onend   = () => this.isSpeaking.set(false);
     utterance.onerror = () => this.isSpeaking.set(false);

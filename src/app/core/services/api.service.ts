@@ -71,6 +71,11 @@ export class ApiService {
     return this.http.post<TranslateResponse>(`${this.base}/translate`, { text, language });
   }
 
+  // Google Cloud TTS — returns base64 MP3; 503 with fallback:true means use browser TTS
+  synthesizeSpeech(text: string, langCode: string): Observable<TtsResponse> {
+    return this.http.post<TtsResponse>(`${this.base}/tts`, { text, langCode });
+  }
+
   // ── Staff: Cards ────────────────────────────────────────────────────────
   getStaffCards(filters?: { status?: string; customerId?: string; search?: string }): Observable<StaffCard[]> {
     let params = new HttpParams();
@@ -207,6 +212,7 @@ export interface LoanApplicationPayload { loanType: string; principalAmount: num
 export interface ChatPayload { message: string; screenContext: string; accountSummary?: object; sessionId?: string; }
 export interface ChatResponse { response: string; sessionId: string; navigateTo?: string | null; }
 export interface TranslateResponse { translatedText: string; language: string; }
+export interface TtsResponse { audioContent?: string; voiceName?: string; message?: string; fallback?: boolean; }
 export interface TxResponse { message: string; transaction: Transaction; }
 
 export interface ApiPayee {
