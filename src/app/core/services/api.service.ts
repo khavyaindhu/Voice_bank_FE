@@ -71,9 +71,14 @@ export class ApiService {
     return this.http.post<TranslateResponse>(`${this.base}/translate`, { text, language });
   }
 
-  // Google Cloud TTS — returns base64 MP3; 503 with fallback:true means use browser TTS
+  // Google Cloud TTS — returns base64 MP3 (only called if googleTts feature flag is true)
   synthesizeSpeech(text: string, langCode: string): Observable<TtsResponse> {
     return this.http.post<TtsResponse>(`${this.base}/tts`, { text, langCode });
+  }
+
+  // Feature flags — tells FE which optional BE features are configured
+  getConfig(): Observable<{ features: { googleTts: boolean } }> {
+    return this.http.get<{ features: { googleTts: boolean } }>(`${this.base}/config`);
   }
 
   // ── Staff: Cards ────────────────────────────────────────────────────────

@@ -102,6 +102,12 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private synth = window.speechSynthesis;
   /** Cached voice list — loaded async (Chrome fires onvoiceschanged after init) */
   private ttsVoices: SpeechSynthesisVoice[] = [];
+  /**
+   * Whether Google Cloud TTS is configured on the backend.
+   * null = not yet checked, true/false = result cached after first /api/config call.
+   * When false, speakMessage skips the network call entirely and uses browser directly.
+   */
+  private googleTtsAvailable: boolean | null = null;
 
   readonly customerQuickActions: QuickAction[] = [
     { label: '⚡ Send $500 to Father',             prompt: 'Maya, send $500 to Father' },
@@ -174,6 +180,12 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.payeeSvc.load();
     this.initSpeechRecognition();
     this.initVoices();
+    // Check once whether Google Cloud TTS is configured on the backend.
+    // Result is cached so speakMessage never makes a wasted network call.
+    this.api.getConfig().subscribe({
+      next:  cfg => { this.googleTtsAvailable = cfg.features?.googleTts ?? false; },
+      error: ()  => { this.googleTtsAvailable = false; },
+    });
   }
 
   ngOnDestroy(): void {
@@ -1232,30 +1244,32 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     const lang = this.locale.selected();
     this.isSpeaking.set(true);
 
-    // ── Try Google Cloud TTS first (native neural voices) ──────────
+    // ── If Google Cloud TTS is NOT configured (or not yet checked), go straight
+    //    to the browser voice — no network call, no Render cold-start delay ──
+    if (!this.googleTtsAvailable) {
+      console.debug('[Maya TTS] using browser voice (Google TTS not configured)');
+      this.speakWithBrowser(plain, lang.speechCode);
+      return;
+    }
+
+    // ── Google Cloud TTS is configured — use it for best native quality ──
     this.api.synthesizeSpeech(plain, lang.code).subscribe({
       next: (res: TtsResponse) => {
         if (res.fallback || !res.audioContent) {
-          // BE says Google TTS not configured — use browser fallback
-          console.debug('[Maya TTS] Google TTS not configured, using browser voice');
+          this.googleTtsAvailable = false; // update cache
           this.speakWithBrowser(plain, lang.speechCode);
           return;
         }
         console.debug('[Maya TTS] Google Cloud TTS voice:', res.voiceName);
-        // Decode base64 MP3 and play via HTML5 Audio
         const audio = new Audio(`data:audio/mp3;base64,${res.audioContent}`);
         this.currentAudio = audio;
         audio.playbackRate = lang.code === 'en' ? 1.0 : 0.9;
         audio.onended  = () => { this.isSpeaking.set(false); this.currentAudio = null; };
         audio.onerror  = () => { this.isSpeaking.set(false); this.currentAudio = null; };
-        audio.play().catch(() => {
-          // Auto-play blocked — fall back to Web Speech
-          this.speakWithBrowser(plain, lang.speechCode);
-        });
+        audio.play().catch(() => { this.speakWithBrowser(plain, lang.speechCode); });
       },
       error: () => {
-        // Network error or 5xx — fall back to Web Speech API
-        console.debug('[Maya TTS] Google TTS request failed, using browser voice');
+        this.googleTtsAvailable = false; // update cache so next click is instant
         this.speakWithBrowser(plain, lang.speechCode);
       },
     });
