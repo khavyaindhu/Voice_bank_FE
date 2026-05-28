@@ -95,6 +95,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private shouldScrollToBottom = false;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private recognition: any = null;
+  private finalSpeechTranscript = '';
   private synth = window.speechSynthesis;
 
   readonly customerQuickActions: QuickAction[] = [
@@ -1011,21 +1012,32 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.recognition = new SpeechRecognition();
     this.recognition.continuous = false;
     this.recognition.interimResults = true;
-    this.recognition.lang = 'en-US';
+    this.recognition.lang = this.locale.selected().speechCode;
+
+    this.recognition.onstart = () => this.ngZone.run(() => {
+      this.isListening.set(true);
+    });
 
     this.recognition.onresult = (event: any) => {
       this.ngZone.run(() => {
-        const transcript = Array.from(event.results as any[])
-          .map((r: any) => r[0].transcript)
-          .join('');
+        let interimTranscript = '';
+
+        for (let i = event.resultIndex ?? 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          const text = result?.[0]?.transcript ?? '';
+          if (result?.isFinal) {
+            this.finalSpeechTranscript = `${this.finalSpeechTranscript} ${text}`.trim();
+          } else {
+            interimTranscript += text;
+          }
+        }
+
+        const transcript = `${this.finalSpeechTranscript} ${interimTranscript}`.trim();
         // Update signal (for Angular state) AND set DOM value directly
         // (signal-based [value] binding can lag in production builds)
         this.inputText.set(transcript);
         if (this.inputField?.nativeElement) {
           this.inputField.nativeElement.value = transcript;
-        }
-        if (event.results[event.results.length - 1].isFinal) {
-          this.isListening.set(false);
         }
       });
     };
@@ -1035,14 +1047,22 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   toggleVoiceInput(): void {
-    if (!this.recognition) return;
+    if (!this.recognition || this.isLoading()) return;
     if (this.isListening()) {
       this.recognition.stop();
       this.isListening.set(false);
     } else {
-      this.recognition.start();
-      this.isListening.set(true);
+      this.finalSpeechTranscript = '';
       this.inputText.set('');
+      if (this.inputField?.nativeElement) {
+        this.inputField.nativeElement.value = '';
+      }
+      this.recognition.lang = this.locale.selected().speechCode;
+      try {
+        this.recognition.start();
+      } catch {
+        this.isListening.set(false);
+      }
     }
   }
 
