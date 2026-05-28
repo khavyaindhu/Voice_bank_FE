@@ -291,7 +291,7 @@
             [value]="inputText()"
             (input)="inputText.set($any($event.target).value)"
             (keydown)="onKeydown($event)"
-            [placeholder]="isListening() ? '🎤 Listening...' : 'Ask about transfers, loans, balances...'"
+            [placeholder]="isListening() ? 'Listening in English...' : 'Ask about transfers, loans, balances...'"
             [disabled]="isLoading()"
           />
 
@@ -299,7 +299,7 @@
             <button class="icon-btn mic-btn" (click)="toggleVoiceInput()"
               [class.active]="isListening()"
               [disabled]="isLoading()"
-              [title]="isListening() ? 'Stop listening' : 'Voice input'">
+              [title]="isListening() ? 'Stop listening' : 'Voice input (English)'">
               <span class="material-icons">{{ isListening() ? 'mic' : 'mic_none' }}</span>
             </button>
           }

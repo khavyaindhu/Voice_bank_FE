@@ -96,6 +96,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private recognition: any = null;
   private finalSpeechTranscript = '';
+  private readonly voiceInputLang = 'en-US';
   private synth = window.speechSynthesis;
 
   readonly customerQuickActions: QuickAction[] = [
@@ -1008,18 +1009,48 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   // ── Voice Input (Web Speech API) ──────────────────────────────
   private initSpeechRecognition(): void {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      console.warn('[Maya voice] SpeechRecognition is not supported in this browser.');
+      return;
+    }
     this.recognition = new SpeechRecognition();
     this.recognition.continuous = false;
     this.recognition.interimResults = true;
-    this.recognition.lang = this.locale.selected().speechCode;
+    this.recognition.maxAlternatives = 1;
+    this.recognition.lang = this.voiceInputLang;
 
     this.recognition.onstart = () => this.ngZone.run(() => {
+      console.debug('[Maya voice] recognition started', { lang: this.recognition?.lang });
       this.isListening.set(true);
     });
 
+    this.recognition.onspeechstart = () => {
+      console.debug('[Maya voice] speech detected');
+    };
+
+    this.recognition.onspeechend = () => {
+      console.debug('[Maya voice] speech ended');
+    };
+
+    this.recognition.onaudiostart = () => {
+      console.debug('[Maya voice] audio capture started');
+    };
+
+    this.recognition.onaudioend = () => {
+      console.debug('[Maya voice] audio capture ended');
+    };
+
+    this.recognition.onnomatch = (event: any) => {
+      console.warn('[Maya voice] no speech match', event);
+    };
+
     this.recognition.onresult = (event: any) => {
       this.ngZone.run(() => {
+        console.debug('[Maya voice] recognition result received', {
+          resultIndex: event.resultIndex,
+          resultCount: event.results?.length,
+        });
+
         let interimTranscript = '';
 
         for (let i = event.resultIndex ?? 0; i < event.results.length; i++) {
@@ -1033,6 +1064,11 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         }
 
         const transcript = `${this.finalSpeechTranscript} ${interimTranscript}`.trim();
+        console.debug('[Maya voice] transcript update', {
+          finalTranscript: this.finalSpeechTranscript,
+          interimTranscript,
+          transcript,
+        });
         // Update signal (for Angular state) AND set DOM value directly
         // (signal-based [value] binding can lag in production builds)
         this.inputText.set(transcript);
@@ -1042,25 +1078,48 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       });
     };
 
-    this.recognition.onerror = () => this.ngZone.run(() => this.isListening.set(false));
-    this.recognition.onend = () => this.ngZone.run(() => this.isListening.set(false));
+    this.recognition.onerror = (event: any) => this.ngZone.run(() => {
+      console.error('[Maya voice] recognition error', {
+        error: event?.error,
+        message: event?.message,
+      });
+      this.isListening.set(false);
+    });
+    this.recognition.onend = () => this.ngZone.run(() => {
+      console.debug('[Maya voice] recognition ended', {
+        finalTranscript: this.finalSpeechTranscript,
+        inputText: this.inputText(),
+      });
+      this.isListening.set(false);
+    });
   }
 
   toggleVoiceInput(): void {
-    if (!this.recognition || this.isLoading()) return;
+    if (!this.recognition) {
+      console.warn('[Maya voice] Mic clicked, but recognition is unavailable.');
+      return;
+    }
+    if (this.isLoading()) {
+      console.debug('[Maya voice] Mic click ignored while assistant is loading.');
+      return;
+    }
     if (this.isListening()) {
+      console.debug('[Maya voice] stopping recognition manually');
       this.recognition.stop();
       this.isListening.set(false);
     } else {
+      console.debug('[Maya voice] starting recognition', { lang: this.voiceInputLang });
       this.finalSpeechTranscript = '';
       this.inputText.set('');
       if (this.inputField?.nativeElement) {
         this.inputField.nativeElement.value = '';
+        this.inputField.nativeElement.focus();
       }
-      this.recognition.lang = this.locale.selected().speechCode;
+      this.recognition.lang = this.voiceInputLang;
       try {
         this.recognition.start();
-      } catch {
+      } catch (error) {
+        console.error('[Maya voice] recognition start failed', error);
         this.isListening.set(false);
       }
     }
