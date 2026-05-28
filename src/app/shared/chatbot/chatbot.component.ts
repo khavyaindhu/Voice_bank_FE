@@ -17,6 +17,8 @@ import { StaffContextService } from '../../core/services/staff-context.service';
 import { LocaleService } from '../../core/services/locale.service';
 
 export interface ChatMessage {
+  /** Unique ID used to update this message in-place after async translation */
+  id?: string;
   role: 'user' | 'assistant';
   content: string;
   htmlContent?: string;
@@ -190,16 +192,14 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
-  private async addWelcome(): Promise<void> {
+  private addWelcome(): void {
     const name = this.auth.currentUser()?.fullName?.split(' ')[0] ?? 'there';
     const isStaff = this.role === 'staff';
     const greeting = isStaff
       ? `Hi ${name}! 👋 I'm **Maya**, your U.S. Bank Staff Assistant.\n\nYou're on the **${this.screenLabel()}** screen. I can help you with:\n- FMS account & transaction lookup\n- Customer search by name or ID\n- Card freeze / dispute queries\n- ACH batch status & reports\n\nTry: _"Show Agni Test transactions for April"_ or _"Search customer Vijaya"_`
       : `Hi ${name}! 👋 I'm **Maya**, your U.S. Bank Voice assistant.\n\nI can see you're on the **${this.screenLabel()}** screen. I'm here to help you with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balance enquiries\n- Loan applications & EMI details\n- Account & RD information\n\nWhat can I help you with today?`;
-    this.isLoading.set(true);
-    const displayText = await this.doTranslate(greeting);
-    this.isLoading.set(false);
-    this.addAssistantMessage(displayText);
+    // addAssistantMessage handles translation internally
+    this.addAssistantMessage(greeting);
   }
 
   // ── Guided Flow Methods ──────────────────────────────────────────
@@ -390,10 +390,8 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     // ── Process locally — no backend call needed ──────────────────
     const result = this.localChat.process(msg, screen, this.accounts());
-    this.isLoading.set(true);
-    const displayText = await this.doTranslate(result.text);
-    this.isLoading.set(false);
-    this.addAssistantMessage(displayText);
+    // addAssistantMessage handles translation internally (fire-and-forget)
+    this.addAssistantMessage(result.text);
     if (result.navigateTo) {
       setTimeout(() => this.router.navigate([result.navigateTo!]), 1000);
     }
@@ -971,13 +969,40 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   private addAssistantMessage(content: string): void {
+    // Every message gets a unique ID so we can update it in-place after translation
+    const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const htmlContent = marked.parse(content) as string;
-    this.messages.update(msgs => [...msgs, { role: 'assistant', content, htmlContent, timestamp: new Date() }]);
+    this.messages.update(msgs => [...msgs, { id, role: 'assistant', content, htmlContent, timestamp: new Date() }]);
     this.shouldScrollToBottom = true;
-    // Auto-speak if enabled
-    if (this.autoSpeak()) {
-      setTimeout(() => this.speakMessage(content), 300);
+
+    if (this.locale.isEnglish) {
+      // English — no translation needed, speak immediately
+      if (this.autoSpeak()) setTimeout(() => this.speakMessage(content), 300);
+      return;
     }
+
+    // Non-English: translate in the background, then patch message content in place
+    this.doTranslate(content)
+      .then(translated => {
+        if (translated === content) {
+          // Translation returned same text — just speak
+          if (this.autoSpeak()) setTimeout(() => this.speakMessage(content), 300);
+          return;
+        }
+        const translatedHtml = marked.parse(translated) as string;
+        this.messages.update(msgs =>
+          msgs.map(m => m.id === id
+            ? { ...m, content: translated, htmlContent: translatedHtml }
+            : m
+          )
+        );
+        this.shouldScrollToBottom = true;
+        if (this.autoSpeak()) setTimeout(() => this.speakMessage(translated), 300);
+      })
+      .catch(() => {
+        // Translation failed — speak original English text
+        if (this.autoSpeak()) setTimeout(() => this.speakMessage(content), 300);
+      });
   }
 
   toggleAutoSpeak(): void {
