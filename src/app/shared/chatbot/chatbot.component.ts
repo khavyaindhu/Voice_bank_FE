@@ -1018,7 +1018,12 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         const transcript = Array.from(event.results as any[])
           .map((r: any) => r[0].transcript)
           .join('');
+        // Update signal (for Angular state) AND set DOM value directly
+        // (signal-based [value] binding can lag in production builds)
         this.inputText.set(transcript);
+        if (this.inputField?.nativeElement) {
+          this.inputField.nativeElement.value = transcript;
+        }
         if (event.results[event.results.length - 1].isFinal) {
           this.isListening.set(false);
         }
