@@ -1159,10 +1159,12 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   private async doTranslate(text: string): Promise<string> {
     if (this.locale.isEnglish) return text;
+    const lang = this.locale.selected();
     try {
-      const result = await lastValueFrom(this.api.translateText(text, this.locale.selected().code));
+      const result = await lastValueFrom(this.api.translateText(text, lang.code));
       return result.translatedText;
-    } catch {
+    } catch (err) {
+      console.error(`[Maya translate] Failed to translate to ${lang.label} (${lang.code}):`, err);
       return text; // fallback to English on error
     }
   }
