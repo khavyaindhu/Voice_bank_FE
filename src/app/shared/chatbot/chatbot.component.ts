@@ -1149,6 +1149,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   selectLanguage(code: string): void {
     this.locale.setLanguage(code);
+    console.log('[Maya locale] Language set to:', code, '→', this.locale.selected().label);
     this.showLangMenu.set(false);
   }
 
@@ -1158,13 +1159,19 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   private async doTranslate(text: string): Promise<string> {
-    if (this.locale.isEnglish) return text;
+    // Read language at the START — before any async gap
     const lang = this.locale.selected();
+    console.log('[Maya translate] doTranslate called', {
+      code: lang.code, label: lang.label, isEnglish: lang.code === 'en',
+    });
+    if (lang.code === 'en') return text;
     try {
+      console.log('[Maya translate] → calling API for', lang.label);
       const result = await lastValueFrom(this.api.translateText(text, lang.code));
-      return result.translatedText;
+      console.log('[Maya translate] ✓ success, preview:', result.translatedText?.substring(0, 60));
+      return result.translatedText ?? text;
     } catch (err) {
-      console.error(`[Maya translate] Failed to translate to ${lang.label} (${lang.code}):`, err);
+      console.error(`[Maya translate] ✗ failed for ${lang.label} (${lang.code}):`, err);
       return text; // fallback to English on error
     }
   }
