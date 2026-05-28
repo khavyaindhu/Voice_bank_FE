@@ -100,6 +100,8 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private finalSpeechTranscript = '';
   private readonly voiceInputLang = 'en-US';
   private synth = window.speechSynthesis;
+  /** Cached voice list — loaded async (Chrome fires onvoiceschanged after init) */
+  private ttsVoices: SpeechSynthesisVoice[] = [];
 
   readonly customerQuickActions: QuickAction[] = [
     { label: '⚡ Send $500 to Father',             prompt: 'Maya, send $500 to Father' },
@@ -171,6 +173,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     // Pre-load payees so Maya can do Quick Pay from any screen
     this.payeeSvc.load();
     this.initSpeechRecognition();
+    this.initVoices();
   }
 
   ngOnDestroy(): void {
@@ -1155,14 +1158,89 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   // ── Voice Output (Text-to-Speech) ────────────────────────────
+
+  /**
+   * Pre-load the browser's voice list into `ttsVoices`.
+   * Chrome loads voices asynchronously and fires `onvoiceschanged`
+   * once they are ready — we hook that event so we always have the
+   * full list before the user clicks the speaker button.
+   */
+  private initVoices(): void {
+    const load = () => { this.ttsVoices = this.synth.getVoices(); };
+    load(); // synchronous in Firefox / Safari; empty array in Chrome until event fires
+    if ('onvoiceschanged' in this.synth) {
+      this.synth.onvoiceschanged = load;
+    }
+  }
+
+  /**
+   * Choose the best available voice for a BCP-47 speech code.
+   *
+   * Priority (highest → lowest):
+   *  1. Google Neural voice with exact language match   — best native quality in Chrome
+   *  2. Any Google voice with exact language match
+   *  3. Microsoft Neural voice with exact language match — good on Windows/Edge
+   *  4. Any Microsoft voice with exact language match
+   *  5. Any voice with exact language match
+   *  6. Google/Microsoft voices with matching language prefix (e.g. 'ta' for 'ta-LK')
+   *  7. Any remaining voice with matching prefix
+   */
+  private pickVoice(speechCode: string): SpeechSynthesisVoice | null {
+    const voices = this.ttsVoices.length ? this.ttsVoices : this.synth.getVoices();
+    if (!voices.length) return null;
+
+    const langPrefix = speechCode.split('-')[0]; // 'ta', 'hi', 'kn', 'es', 'en'
+
+    const exact  = voices.filter(v => v.lang === speechCode);
+    const prefix = voices.filter(v => v.lang !== speechCode &&
+                                      v.lang.toLowerCase().startsWith(langPrefix));
+
+    return (
+      exact.find(v => /google/i.test(v.name) && /neural|natural|enhanced/i.test(v.name)) ??
+      exact.find(v => /google/i.test(v.name))  ??
+      exact.find(v => /microsoft/i.test(v.name) && /neural|natural/i.test(v.name)) ??
+      exact.find(v => /microsoft/i.test(v.name)) ??
+      exact[0]  ??
+      prefix.find(v => /google/i.test(v.name))  ??
+      prefix.find(v => /microsoft/i.test(v.name)) ??
+      prefix[0] ??
+      null
+    );
+  }
+
   speakMessage(content: string): void {
     if (this.isSpeaking()) { this.synth.cancel(); this.isSpeaking.set(false); return; }
-    const plain = content.replace(/[#*`_~\[\]()]/g, '').trim();
+
+    // Strip markdown formatting so the TTS reads clean text
+    const plain = content
+      .replace(/\*\*(.*?)\*\*/g, '$1')   // bold
+      .replace(/\*(.*?)\*/g, '$1')        // italic
+      .replace(/`([^`]+)`/g, '$1')        // inline code
+      .replace(/#{1,6}\s/g, '')           // headings
+      .replace(/[_~\[\]()]/g, '')         // misc symbols
+      .replace(/^\s*[-•]\s/gm, '')        // bullet points
+      .trim();
+
+    const lang      = this.locale.selected();
     const utterance = new SpeechSynthesisUtterance(plain);
-    utterance.lang = this.locale.selected().speechCode;
-    utterance.rate = 0.95;
+    utterance.lang  = lang.speechCode;
+
+    // Explicitly pick the best native voice so we get Google हिन्दी,
+    // Google தமிழ், Google ಕನ್ನಡ, etc. instead of a low-quality fallback
+    const voice = this.pickVoice(lang.speechCode);
+    if (voice) {
+      utterance.voice = voice;
+      console.debug('[Maya TTS] voice selected:', voice.name, '|', voice.lang);
+    } else {
+      console.debug('[Maya TTS] no native voice found for', lang.speechCode, '— using browser default');
+    }
+
+    // Slightly slower rate for non-Latin scripts improves clarity and naturalness
+    utterance.rate  = lang.code === 'en' ? 0.95 : 0.82;
+    utterance.pitch = 1.0;
+
     utterance.onstart = () => this.isSpeaking.set(true);
-    utterance.onend = () => this.isSpeaking.set(false);
+    utterance.onend   = () => this.isSpeaking.set(false);
     utterance.onerror = () => this.isSpeaking.set(false);
     this.synth.speak(utterance);
   }
