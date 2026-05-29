@@ -21,6 +21,8 @@ export interface ChatMessage {
   id?: string;
   role: 'user' | 'assistant';
   content: string;
+  /** English/source text used when retranslating after language changes */
+  sourceContent?: string;
   htmlContent?: string;
   timestamp: Date;
   screenContext?: string;
@@ -988,37 +990,74 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private addAssistantMessage(content: string): void {
     // Every message gets a unique ID so we can update it in-place after translation
     const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const lang = this.locale.selected();
     const htmlContent = marked.parse(content) as string;
-    this.messages.update(msgs => [...msgs, { id, role: 'assistant', content, htmlContent, timestamp: new Date() }]);
+    this.messages.update(msgs => [...msgs, {
+      id,
+      role: 'assistant',
+      content,
+      sourceContent: content,
+      htmlContent,
+      timestamp: new Date(),
+    }]);
     this.shouldScrollToBottom = true;
 
-    if (this.locale.isEnglish) {
+    if (lang.code === 'en') {
       // English — no translation needed, speak immediately
       if (this.autoSpeak()) setTimeout(() => this.speakMessage(content), 300);
       return;
     }
 
+    console.log('[Maya translate] queue assistant message for translation', {
+      id,
+      target: lang.code,
+      label: lang.label,
+      sourcePreview: content.substring(0, 80),
+    });
+    const pending = `Translating to ${lang.label}...`;
+    this.messages.update(msgs =>
+      msgs.map(m => m.id === id
+        ? { ...m, content: pending, htmlContent: marked.parse(pending) as string }
+        : m
+      )
+    );
+
     // Non-English: translate in the background, then patch message content in place
     this.doTranslate(content)
       .then(translated => {
-        if (translated === content) {
-          // Translation returned same text — just speak
-          if (this.autoSpeak()) setTimeout(() => this.speakMessage(content), 300);
-          return;
+        if (translated.trim() === content.trim()) {
+          // Translation returned same text; keep it visible but log loudly.
+          console.warn('[Maya translate] translation returned unchanged text', {
+            id,
+            target: lang.code,
+            sourcePreview: content.substring(0, 80),
+          });
         }
         const translatedHtml = marked.parse(translated) as string;
         this.messages.update(msgs =>
           msgs.map(m => m.id === id
-            ? { ...m, content: translated, htmlContent: translatedHtml }
+            ? { ...m, content: translated, sourceContent: content, htmlContent: translatedHtml }
             : m
           )
         );
         this.shouldScrollToBottom = true;
         if (this.autoSpeak()) setTimeout(() => this.speakMessage(translated), 300);
       })
-      .catch(() => {
-        // Translation failed — speak original English text
-        if (this.autoSpeak()) setTimeout(() => this.speakMessage(content), 300);
+      .catch(err => {
+        // Translation failed; do not speak the English source for non-English mode.
+        console.error('[Maya translate] assistant message translation failed', {
+          id,
+          target: lang.code,
+          error: err,
+        });
+        const failure = `Translation failed for ${lang.label}. Check the browser console and backend logs.`;
+        this.messages.update(msgs =>
+          msgs.map(m => m.id === id
+            ? { ...m, content: failure, htmlContent: marked.parse(failure) as string }
+            : m
+          )
+        );
+        this.shouldScrollToBottom = true;
       });
   }
 
@@ -1304,6 +1343,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.locale.setLanguage(code);
     console.log('[Maya locale] Language set to:', code, '→', this.locale.selected().label);
     this.showLangMenu.set(false);
+    this.retranslateAssistantMessages();
   }
 
   @HostListener('document:click')
@@ -1325,7 +1365,71 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       return result.translatedText ?? text;
     } catch (err) {
       console.error(`[Maya translate] ✗ failed for ${lang.label} (${lang.code}):`, err);
-      return text; // fallback to English on error
+      throw err;
+    }
+  }
+
+  private retranslateAssistantMessages(): void {
+    const lang = this.locale.selected();
+    const assistantMessages = this.messages().filter(m =>
+      m.role === 'assistant' && !m.type && (m.sourceContent || m.content)
+    );
+
+    console.log('[Maya translate] retranslate visible assistant messages', {
+      target: lang.code,
+      label: lang.label,
+      count: assistantMessages.length,
+    });
+
+    if (lang.code === 'en') {
+      this.messages.update(msgs => msgs.map(m => {
+        if (m.role !== 'assistant' || !m.sourceContent) return m;
+        return {
+          ...m,
+          content: m.sourceContent,
+          htmlContent: marked.parse(m.sourceContent) as string,
+        };
+      }));
+      return;
+    }
+
+    for (const msg of assistantMessages) {
+      const id = msg.id;
+      const source = msg.sourceContent ?? msg.content;
+      if (!id || !source.trim()) continue;
+
+      const pending = `Translating to ${lang.label}...`;
+      this.messages.update(msgs =>
+        msgs.map(m => m.id === id
+          ? { ...m, sourceContent: source, content: pending, htmlContent: marked.parse(pending) as string }
+          : m
+        )
+      );
+
+      lastValueFrom(this.api.translateText(source, lang.code))
+        .then(result => {
+          const translated = result.translatedText ?? source;
+          this.messages.update(msgs =>
+            msgs.map(m => m.id === id
+              ? { ...m, sourceContent: source, content: translated, htmlContent: marked.parse(translated) as string }
+              : m
+            )
+          );
+        })
+        .catch(err => {
+          console.error('[Maya translate] retranslate failed', {
+            id,
+            target: lang.code,
+            error: err,
+          });
+          const failure = `Translation failed for ${lang.label}. Check the browser console and backend logs.`;
+          this.messages.update(msgs =>
+            msgs.map(m => m.id === id
+              ? { ...m, sourceContent: source, content: failure, htmlContent: marked.parse(failure) as string }
+              : m
+            )
+          );
+        });
     }
   }
 
