@@ -999,6 +999,16 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     const lang = this.locale.selected();
     if (lang.code === 'en') return content;
 
+    const localCommand = this.translateKnownCommandLocally(content, lang.code);
+    if (localCommand) {
+      console.log('[Maya command] local multilingual command matched', {
+        source: lang.code,
+        original: content,
+        englishText: localCommand,
+      });
+      return localCommand;
+    }
+
     console.log('[Maya command] translating user command to English', {
       source: lang.code,
       label: lang.label,
@@ -1023,6 +1033,57 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  private translateKnownCommandLocally(content: string, langCode: string): string | null {
+    const lower = content
+      .toLocaleLowerCase()
+      .normalize('NFC')
+      .replace(/[.,!?;:"'()[\]{}]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const latinFolded = lower.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const hasAny = (terms: string[]) => terms.some(term => lower.includes(term) || latinFolded.includes(term));
+
+    const termsByCommand: Record<string, Record<string, string[]>> = {
+      'open reports': {
+        hi: ['रिपोर्ट', 'रिपोर्ट्स', 'रिपोर्टिंग', 'विश्लेषण'],
+        ta: ['ரிப்போர்ட்', 'ரிப்போர்ட்ஸ்', 'அறிக்கை', 'அறிக்கைகள்', 'பகுப்பாய்வு'],
+        kn: ['ರಿಪೋರ್ಟ್', 'ರಿಪೋರ್ಟ್ಸ್', 'ವರದಿ', 'ವರದಿಗಳು', 'ವಿಶ್ಲೇಷಣೆ'],
+        es: ['reporte', 'reportes', 'informes', 'informe', 'analitica', 'analítica'],
+      },
+      'open customer search': {
+        hi: ['कस्टमर', 'ग्राहक', 'ग्राहक खोज', 'कस्टमर सर्च'],
+        ta: ['கஸ்டமர்', 'வாடிக்கையாளர்', 'வாடிக்கையாளர் தேடல்', 'கஸ்டமர் தேடல்'],
+        kn: ['ಕಸ್ಟಮರ್', 'ಗ್ರಾಹಕ', 'ಗ್ರಾಹಕ ಹುಡುಕಾಟ', 'ಕಸ್ಟಮರ್ ಹುಡುಕಾಟ'],
+        es: ['cliente', 'clientes', 'busqueda de cliente', 'búsqueda de cliente'],
+      },
+      'open fms account lookup': {
+        hi: ['एफएमएस', 'fms', 'लेजर'],
+        ta: ['எஃப்எம்எஸ்', 'எப் எம் எஸ்', 'fms', 'லெட்ஜர்'],
+        kn: ['ಎಫ್ಎಂಎಸ್', 'ಎಫ್ ಎಂ ಎಸ್', 'fms', 'ಲೆಡ್ಜರ್'],
+        es: ['fms', 'libro mayor', 'ledger'],
+      },
+      'open card services': {
+        hi: ['कार्ड सर्विस', 'कार्ड सर्विसेज', 'कार्ड सेवा', 'कार्ड'],
+        ta: ['கார்டு சர்வீஸ்', 'கார்டு சேவை', 'கார்டு', 'அட்டை'],
+        kn: ['ಕಾರ್ಡ್ ಸರ್ವಿಸ್', 'ಕಾರ್ಡ್ ಸೇವೆ', 'ಕಾರ್ಡ್'],
+        es: ['servicio de tarjeta', 'servicios de tarjeta', 'tarjeta', 'tarjetas'],
+      },
+      'go to staff dashboard': {
+        hi: ['डैशबोर्ड', 'स्टाफ डैशबोर्ड', 'होम', 'मुख्य पेज'],
+        ta: ['டாஷ்போர்ட்', 'ஸ்டாஃப் டாஷ்போர்ட்', 'ஹோம்', 'முகப்பு'],
+        kn: ['ಡ್ಯಾಶ್ಬೋರ್ಡ್', 'ಸ್ಟಾಫ್ ಡ್ಯಾಶ್ಬೋರ್ಡ್', 'ಹೋಮ್', 'ಮುಖ್ಯ ಪುಟ'],
+        es: ['dashboard', 'panel', 'inicio', 'pagina principal', 'página principal'],
+      },
+    };
+
+    for (const [command, termsByLanguage] of Object.entries(termsByCommand)) {
+      const terms = termsByLanguage[langCode];
+      if (terms && hasAny(terms)) return command;
+    }
+
+    return null;
   }
 
   private addAssistantMessage(content: string): void {
