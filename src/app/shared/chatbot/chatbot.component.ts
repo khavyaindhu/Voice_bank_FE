@@ -100,7 +100,6 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private recognition: any = null;
   private finalSpeechTranscript = '';
-  private readonly voiceInputLang = 'en-US';
   private synth = window.speechSynthesis;
   /** Cached voice list — loaded async (Chrome fires onvoiceschanged after init) */
   private ttsVoices: SpeechSynthesisVoice[] = [];
@@ -135,6 +134,14 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   get quickActions(): QuickAction[] {
     return this.role === 'staff' ? this.staffQuickActions : this.customerQuickActions;
+  }
+
+  voiceInputLabel(): string {
+    return this.locale.selected().label;
+  }
+
+  private voiceInputLang(): string {
+    return this.locale.selected().speechCode;
   }
 
   screenLabel = computed(() => {
@@ -342,41 +349,42 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       role: 'user', content: msg, timestamp: new Date(), screenContext: screen,
     }]);
     this.shouldScrollToBottom = true;
+    const commandMsg = await this.translateUserCommandForProcessing(msg);
 
     // ── Emergency card flow: intercept active-flow replies ───────────
-    if (this.handleEmergencyCardResponse(msg)) return;
+    if (this.handleEmergencyCardResponse(commandMsg)) return;
 
     // ── Emergency card flow: detect trigger phrases ───────────────────
     // Checked here (before localChat.process) so it can never be shadowed
     // by a pattern in the INTENTS array (e.g. "my card" or "freeze").
     const isCardEmergency =
-      /lost.*(?:my\s+)?card|(?:my\s+)?card.*(?:is\s+)?lost/i.test(msg)   ||
-      /stolen.*(?:my\s+)?card|(?:my\s+)?card.*(?:was\s+|is\s+)?stolen/i.test(msg) ||
-      /missing.*(?:my\s+)?card|(?:my\s+)?card.*(?:is\s+)?missing/i.test(msg) ||
-      /freeze\s+my\s+card|block\s+my\s+card|lock\s+my\s+card/i.test(msg)  ||
-      /unauthorized.*charg|someone.*used.*my\s+card|card.*compromised/i.test(msg);
+      /lost.*(?:my\s+)?card|(?:my\s+)?card.*(?:is\s+)?lost/i.test(commandMsg)   ||
+      /stolen.*(?:my\s+)?card|(?:my\s+)?card.*(?:was\s+|is\s+)?stolen/i.test(commandMsg) ||
+      /missing.*(?:my\s+)?card|(?:my\s+)?card.*(?:is\s+)?missing/i.test(commandMsg) ||
+      /freeze\s+my\s+card|block\s+my\s+card|lock\s+my\s+card/i.test(commandMsg)  ||
+      /unauthorized.*charg|someone.*used.*my\s+card|card.*compromised/i.test(commandMsg);
     if (isCardEmergency) {
       this.startEmergencyCardFlow();
       return;
     }
 
     // ── Staff intents: navigate + pre-fill staff screens ────────────
-    if (this.role === 'staff' && this.handleStaffIntent(msg)) return;
+    if (this.role === 'staff' && this.handleStaffIntent(commandMsg)) return;
 
     // ── Quick Pay: intercept active-flow replies ─────────────────────
-    if (this.handleQuickPayResponse(msg)) return;
+    if (this.handleQuickPayResponse(commandMsg)) return;
 
     // ── Quick Pay: detect "send $X to [payee]" trigger ───────────────
     // Pattern: send/pay/transfer + dollar amount + to + payee name
-    const qpMatch = msg.match(
+    const qpMatch = commandMsg.match(
       /(?:send|pay|transfer|wire)\s+\$?([\d,]+(?:\.\d+)?)\s+(?:to|for)\s+(.+)/i
-    ) ?? msg.match(
+    ) ?? commandMsg.match(
       /(?:send|pay|transfer|wire)\s+(?:to\s+)?(.+?)\s+\$?([\d,]+(?:\.\d+)?)/i
     );
     if (qpMatch) {
       // First pattern: amount is group 1, name is group 2
       // Second pattern: name is group 1, amount is group 2
-      const isFirstPattern = /(?:send|pay|transfer|wire)\s+\$?[\d]/i.test(msg);
+      const isFirstPattern = /(?:send|pay|transfer|wire)\s+\$?[\d]/i.test(commandMsg);
       const amountStr = (isFirstPattern ? qpMatch[1] : qpMatch[2]).replace(/,/g, '');
       const nameStr   = (isFirstPattern ? qpMatch[2] : qpMatch[1]).trim();
       const amount    = parseFloat(amountStr);
@@ -398,17 +406,17 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     // ── If guided flow is active, handle locally without calling BE ──
-    if (this.handleFlowAnswer(msg)) return;
+    if (this.handleFlowAnswer(commandMsg)) return;
 
     // ── Check for "fill form" trigger keywords ────────────────────
-    const fillTrigger = /fill\s*form|guide\s*me|start\s*form|help.*fill|fill.*for\s*me|let'?s\s*go|assist.*form/i.test(msg);
+    const fillTrigger = /fill\s*form|guide\s*me|start\s*form|help.*fill|fill.*for\s*me|let'?s\s*go|assist.*form/i.test(commandMsg);
     if (fillTrigger && this.guidedFlow.hasFlow(screen)) {
       this.startGuidedFlow();
       return;
     }
 
     // ── Process locally — no backend call needed ──────────────────
-    const result = this.localChat.process(msg, screen, this.accounts());
+    const result = this.localChat.process(commandMsg, screen, this.accounts());
     // addAssistantMessage handles translation internally (fire-and-forget)
     this.addAssistantMessage(result.text);
     if (result.navigateTo) {
@@ -987,6 +995,36 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     return PayeeService.transferLabel(t);
   }
 
+  private async translateUserCommandForProcessing(content: string): Promise<string> {
+    const lang = this.locale.selected();
+    if (lang.code === 'en') return content;
+
+    console.log('[Maya command] translating user command to English', {
+      source: lang.code,
+      label: lang.label,
+      contentPreview: content.substring(0, 80),
+    });
+
+    this.isLoading.set(true);
+    try {
+      const result = await lastValueFrom(this.api.translateCommandToEnglish(content, lang.code));
+      const englishText = result.englishText?.trim() || content;
+      console.log('[Maya command] English command', {
+        source: lang.code,
+        englishText,
+      });
+      return englishText;
+    } catch (err) {
+      console.error('[Maya command] command translation failed; using original text', {
+        source: lang.code,
+        error: err,
+      });
+      return content;
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
   private addAssistantMessage(content: string): void {
     // Every message gets a unique ID so we can update it in-place after translation
     const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -1098,7 +1136,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.recognition.continuous = false;
     this.recognition.interimResults = true;
     this.recognition.maxAlternatives = 1;
-    this.recognition.lang = this.voiceInputLang;
+    this.recognition.lang = this.voiceInputLang();
 
     this.recognition.onstart = () => this.ngZone.run(() => {
       console.debug('[Maya voice] recognition started', { lang: this.recognition?.lang });
@@ -1189,14 +1227,15 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.recognition.stop();
       this.isListening.set(false);
     } else {
-      console.debug('[Maya voice] starting recognition', { lang: this.voiceInputLang });
+      const lang = this.voiceInputLang();
+      console.debug('[Maya voice] starting recognition', { lang });
       this.finalSpeechTranscript = '';
       this.inputText.set('');
       if (this.inputField?.nativeElement) {
         this.inputField.nativeElement.value = '';
         this.inputField.nativeElement.focus();
       }
-      this.recognition.lang = this.voiceInputLang;
+      this.recognition.lang = lang;
       try {
         this.recognition.start();
       } catch (error) {

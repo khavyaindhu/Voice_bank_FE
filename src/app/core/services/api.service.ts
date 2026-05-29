@@ -71,6 +71,10 @@ export class ApiService {
     return this.http.post<TranslateResponse>(`${this.base}/translate`, { text, language });
   }
 
+  translateCommandToEnglish(text: string, sourceLanguage: string): Observable<CommandTranslateResponse> {
+    return this.http.post<CommandTranslateResponse>(`${this.base}/translate/to-english`, { text, sourceLanguage });
+  }
+
   // Google Cloud TTS — returns base64 MP3 (only called if googleTts feature flag is true)
   synthesizeSpeech(text: string, langCode: string): Observable<TtsResponse> {
     return this.http.post<TtsResponse>(`${this.base}/tts`, { text, langCode });
@@ -217,6 +221,7 @@ export interface LoanApplicationPayload { loanType: string; principalAmount: num
 export interface ChatPayload { message: string; screenContext: string; accountSummary?: object; sessionId?: string; }
 export interface ChatResponse { response: string; sessionId: string; navigateTo?: string | null; }
 export interface TranslateResponse { translatedText: string; language: string; }
+export interface CommandTranslateResponse { englishText: string; sourceLanguage: string; }
 export interface TtsResponse { audioContent?: string; voiceName?: string; message?: string; fallback?: boolean; }
 export interface TxResponse { message: string; transaction: Transaction; }
 
