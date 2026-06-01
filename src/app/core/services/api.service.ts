@@ -75,16 +75,6 @@ export class ApiService {
     return this.http.post<CommandTranslateResponse>(`${this.base}/translate/to-english`, { text, sourceLanguage });
   }
 
-  // Google Cloud TTS — returns base64 MP3 (only called if googleTts feature flag is true)
-  synthesizeSpeech(text: string, langCode: string): Observable<TtsResponse> {
-    return this.http.post<TtsResponse>(`${this.base}/tts`, { text, langCode });
-  }
-
-  // Feature flags — tells FE which optional BE features are configured
-  getConfig(): Observable<{ features: { googleTts: boolean } }> {
-    return this.http.get<{ features: { googleTts: boolean } }>(`${this.base}/config`);
-  }
-
   // ── Staff: Cards ────────────────────────────────────────────────────────
   getStaffCards(filters?: { status?: string; customerId?: string; search?: string }): Observable<StaffCard[]> {
     let params = new HttpParams();
@@ -222,7 +212,6 @@ export interface ChatPayload { message: string; screenContext: string; accountSu
 export interface ChatResponse { response: string; sessionId: string; navigateTo?: string | null; }
 export interface TranslateResponse { translatedText: string; language: string; }
 export interface CommandTranslateResponse { englishText: string; sourceLanguage: string; }
-export interface TtsResponse { audioContent?: string; voiceName?: string; message?: string; fallback?: boolean; }
 export interface TxResponse { message: string; transaction: Transaction; }
 
 export interface ApiPayee {
