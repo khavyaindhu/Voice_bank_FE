@@ -104,6 +104,15 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   /** Cached voice list — loaded async (Chrome fires onvoiceschanged after init) */
   private ttsVoices: SpeechSynthesisVoice[] = [];
   private ttsUnavailableNoticeCodes = new Set<string>();
+  /**
+   * True between recognition.start() and the engine's onend event.
+   * `isListening` only flips on onstart, which Edge fires late (after its
+   * cloud speech session connects) — relying on it alone lets a second mic
+   * click call start() on an already-started engine (InvalidStateError).
+   */
+  private recognitionActive = false;
+  /** Set when a stuck engine was aborted and recognition should restart on onend */
+  private pendingRecognitionRestart = false;
 
   readonly customerQuickActions: QuickAction[] = [
     { label: '⚡ Send $500 to Father',             prompt: 'Maya, send $500 to Father' },
@@ -1257,7 +1266,13 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         finalTranscript: this.finalSpeechTranscript,
         inputText: this.inputText(),
       });
+      this.recognitionActive = false;
       this.isListening.set(false);
+      if (this.pendingRecognitionRestart) {
+        this.pendingRecognitionRestart = false;
+        console.debug('[Maya voice] restarting recognition after stuck-engine reset');
+        setTimeout(() => this.startRecognition(), 100);
+      }
     });
   }
 
@@ -1270,7 +1285,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       console.debug('[Maya voice] Mic click ignored while assistant is loading.');
       return;
     }
-    if (this.isListening()) {
+    if (this.isListening() || this.recognitionActive) {
       console.debug('[Maya voice] stopping recognition manually');
       this.recognition.stop();
       this.isListening.set(false);
@@ -1284,9 +1299,23 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         this.inputField.nativeElement.focus();
       }
       this.recognition.lang = lang;
-      try {
-        this.recognition.start();
-      } catch (error) {
+      this.startRecognition();
+    }
+  }
+
+  private startRecognition(): void {
+    try {
+      this.recognition.start();
+      this.recognitionActive = true;
+    } catch (error) {
+      if ((error as DOMException)?.name === 'InvalidStateError') {
+        // Engine is stuck in a started state our flags missed — force-reset
+        // it and let onend trigger a clean restart.
+        console.warn('[Maya voice] engine already started — aborting and retrying');
+        this.pendingRecognitionRestart = true;
+        this.recognitionActive = true;
+        this.recognition.abort();
+      } else {
         console.error('[Maya voice] recognition start failed', error);
         this.isListening.set(false);
       }
