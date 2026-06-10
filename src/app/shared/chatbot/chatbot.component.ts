@@ -1130,9 +1130,26 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       },
     };
 
+    // Demo customer names in native scripts — lets spoken commands like
+    // "ವಿಜಯಾ ಕಳೆದ ಮೂರು ತಿಂಗಳ ವಹಿವಾಟು ತೋರಿಸು" keep the customer filter
+    // instead of opening the all-customers report.
+    const nativeCustomerNames: Record<string, string[]> = {
+      vijaya: ['ವಿಜಯಾ', 'ವಿಜಯ', 'विजया', 'विजय', 'விஜயா', 'விஜய', 'vijaya'],
+      ramesh: ['ರಮೇಶ್', 'ರಮೇಶ', 'रमेश', 'ரமேஷ்', 'ramesh'],
+      agni:   ['ಅಗ್ನಿ', 'अग्नि', 'அக்னி', 'agni'],
+    };
+
     for (const [command, termsByLanguage] of Object.entries(termsByCommand)) {
       const terms = termsByLanguage[langCode];
-      if (terms && hasAny(terms)) return command;
+      if (terms && hasAny(terms)) {
+        const periodMatch = command.match(/^open transactions report for (.+)$/);
+        if (periodMatch) {
+          for (const [name, variants] of Object.entries(nativeCustomerNames)) {
+            if (hasAny(variants)) return `show transactions for ${name} ${periodMatch[1]}`;
+          }
+        }
+        return command;
+      }
     }
 
     return null;
