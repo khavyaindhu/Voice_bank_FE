@@ -1057,6 +1057,39 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     const hasAny = (terms: string[]) => terms.some(term => lower.includes(term) || latinFolded.includes(term));
 
     const termsByCommand: Record<string, Record<string, string[]>> = {
+      // Report period commands — mapped to phrasings that handleStaffIntent
+      // parses deterministically (preset detected, no bogus customer capture).
+      // Order matters: "3 months" before "month" so the longer phrase wins.
+      'open transactions report for last 3 months': {
+        hi: ['पिछले 3 महीने', 'पिछले तीन महीने', 'पिछले 3 महीनों', 'पिछले तीन महीनों'],
+        ta: ['கடந்த 3 மாத', 'கடந்த மூன்று மாத'],
+        kn: ['ಕಳೆದ 3 ತಿಂಗಳ', 'ಕಳೆದ ಮೂರು ತಿಂಗಳ'],
+        es: ['ultimos 3 meses', 'últimos 3 meses', 'ultimos tres meses', 'últimos tres meses'],
+      },
+      'open transactions report for last week': {
+        hi: ['पिछले हफ्ते', 'पिछले सप्ताह', 'पिछला हफ्ता'],
+        ta: ['கடந்த வார'],
+        kn: ['ಕಳೆದ ವಾರ'],
+        es: ['semana pasada', 'ultima semana', 'última semana'],
+      },
+      'open transactions report for last month': {
+        hi: ['पिछले महीने', 'पिछला महीना', 'पिछले माह'],
+        ta: ['கடந்த மாத'],
+        kn: ['ಕಳೆದ ತಿಂಗಳ'],
+        es: ['mes pasado', 'ultimo mes', 'último mes'],
+      },
+      'open transactions report for last year': {
+        hi: ['पिछले साल', 'पिछले वर्ष', 'पिछला साल'],
+        ta: ['கடந்த வருட', 'கடந்த ஆண்டு'],
+        kn: ['ಕಳೆದ ವರ್ಷ'],
+        es: ['ano pasado', 'año pasado', 'ultimo ano', 'último año'],
+      },
+      'open transactions report for this month': {
+        hi: ['इस महीने', 'इस माह'],
+        ta: ['இந்த மாத'],
+        kn: ['ಈ ತಿಂಗಳ'],
+        es: ['este mes'],
+      },
       'open reports': {
         hi: ['रिपोर्ट', 'रिपोर्ट्स', 'रिपोर्टिंग', 'विश्लेषण'],
         ta: ['ரிப்போர்ட்', 'ரிப்போர்ட்ஸ்', 'அறிக்கை', 'அறிக்கைகள்', 'பகுப்பாய்வு'],
@@ -1075,11 +1108,15 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         kn: ['ಎಫ್ಎಂಎಸ್', 'ಎಫ್ ಎಂ ಎಸ್', 'fms', 'ಲೆಡ್ಜರ್'],
         es: ['fms', 'libro mayor', 'ledger'],
       },
+      // NOTE: only compound "card service(s)" terms here. Bare "card" words
+      // (कार्ड / கார்டு / ಕಾರ್ಡ್ / tarjeta) used to hijack action commands like
+      // "विजया का कार्ड फ्रीज करो" into plain navigation — those must fall
+      // through to the to-english translation so the freeze intent can match.
       'open card services': {
-        hi: ['कार्ड सर्विस', 'कार्ड सर्विसेज', 'कार्ड सेवा', 'कार्ड'],
-        ta: ['கார்டு சர்வீஸ்', 'கார்டு சேவை', 'கார்டு', 'அட்டை'],
-        kn: ['ಕಾರ್ಡ್ ಸರ್ವಿಸ್', 'ಕಾರ್ಡ್ ಸೇವೆ', 'ಕಾರ್ಡ್'],
-        es: ['servicio de tarjeta', 'servicios de tarjeta', 'tarjeta', 'tarjetas'],
+        hi: ['कार्ड सर्विस', 'कार्ड सर्विसेज', 'कार्ड सेवा'],
+        ta: ['கார்டு சர்வீஸ்', 'கார்டு சேவை', 'அட்டை சேவை'],
+        kn: ['ಕಾರ್ಡ್ ಸರ್ವಿಸ್', 'ಕಾರ್ಡ್ ಸೇವೆ'],
+        es: ['servicio de tarjeta', 'servicios de tarjeta'],
       },
       'go to staff dashboard': {
         hi: ['डैशबोर्ड', 'स्टाफ डैशबोर्ड', 'होम', 'मुख्य पेज'],
