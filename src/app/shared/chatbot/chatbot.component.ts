@@ -1060,28 +1060,31 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       // Report period commands — mapped to phrasings that handleStaffIntent
       // parses deterministically (preset detected, no bogus customer capture).
       // Order matters: "3 months" before "month" so the longer phrase wins.
+      // Kannada lists include common speech-recognizer misspellings:
+      // ಕಳೆದ (last) is often heard as ಕಲಿದ/ಕಲಿತ, ಹೋದ is a colloquial variant.
       'open transactions report for last 3 months': {
         hi: ['पिछले 3 महीने', 'पिछले तीन महीने', 'पिछले 3 महीनों', 'पिछले तीन महीनों'],
-        ta: ['கடந்த 3 மாத', 'கடந்த மூன்று மாத'],
-        kn: ['ಕಳೆದ 3 ತಿಂಗಳ', 'ಕಳೆದ ಮೂರು ತಿಂಗಳ'],
+        ta: ['கடந்த 3 மாத', 'கடந்த மூன்று மாத', '3 மாத பரிவர்த்தனை', 'மூன்று மாத பரிவர்த்தனை'],
+        kn: ['ಕಳೆದ 3 ತಿಂಗಳ', 'ಕಳೆದ ಮೂರು ತಿಂಗಳ', 'ಕಲಿದ ಮೂರು ತಿಂಗಳ', 'ಕಲಿತ ಮೂರು ತಿಂಗಳ',
+             'ಹೋದ ಮೂರು ತಿಂಗಳ', '3 ತಿಂಗಳ ವಹಿವಾಟು', 'ಮೂರು ತಿಂಗಳ ವಹಿವಾಟು', 'ಮೂರು ತಿಂಗಳು ವಹಿವಾಟು'],
         es: ['ultimos 3 meses', 'últimos 3 meses', 'ultimos tres meses', 'últimos tres meses'],
       },
       'open transactions report for last week': {
         hi: ['पिछले हफ्ते', 'पिछले सप्ताह', 'पिछला हफ्ता'],
         ta: ['கடந்த வார'],
-        kn: ['ಕಳೆದ ವಾರ'],
+        kn: ['ಕಳೆದ ವಾರ', 'ಕಲಿದ ವಾರ', 'ಕಲಿತ ವಾರ', 'ಹೋದ ವಾರ'],
         es: ['semana pasada', 'ultima semana', 'última semana'],
       },
       'open transactions report for last month': {
         hi: ['पिछले महीने', 'पिछला महीना', 'पिछले माह'],
         ta: ['கடந்த மாத'],
-        kn: ['ಕಳೆದ ತಿಂಗಳ'],
+        kn: ['ಕಳೆದ ತಿಂಗಳ', 'ಕಲಿದ ತಿಂಗಳ', 'ಕಲಿತ ತಿಂಗಳ', 'ಹೋದ ತಿಂಗಳ'],
         es: ['mes pasado', 'ultimo mes', 'último mes'],
       },
       'open transactions report for last year': {
         hi: ['पिछले साल', 'पिछले वर्ष', 'पिछला साल'],
         ta: ['கடந்த வருட', 'கடந்த ஆண்டு'],
-        kn: ['ಕಳೆದ ವರ್ಷ'],
+        kn: ['ಕಳೆದ ವರ್ಷ', 'ಕಲಿದ ವರ್ಷ', 'ಕಲಿತ ವರ್ಷ', 'ಹೋದ ವರ್ಷ', 'ಕಳೆದ ವರುಷ', 'ಕಲಿತ ವರುಣ'],
         es: ['ano pasado', 'año pasado', 'ultimo ano', 'último año'],
       },
       'open transactions report for this month': {
@@ -1115,7 +1118,8 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       'open card services': {
         hi: ['कार्ड सर्विस', 'कार्ड सर्विसेज', 'कार्ड सेवा'],
         ta: ['கார்டு சர்வீஸ்', 'கார்டு சேவை', 'அட்டை சேவை'],
-        kn: ['ಕಾರ್ಡ್ ಸರ್ವಿಸ್', 'ಕಾರ್ಡ್ ಸೇವೆ'],
+        // ಕಾರ್ ಸರ್ವಿಸ್ = recognizer often drops the ಡ್ from ಕಾರ್ಡ್ ("card" → "car")
+        kn: ['ಕಾರ್ಡ್ ಸರ್ವಿಸ್', 'ಕಾರ್ಡ್ ಸೇವೆ', 'ಕಾರ್ ಸರ್ವಿಸ್', 'ಕಾರ್ಡ್ ಸರ್ವೀಸ್'],
         es: ['servicio de tarjeta', 'servicios de tarjeta'],
       },
       'go to staff dashboard': {
