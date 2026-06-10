@@ -1,5 +1,7 @@
 // U.S. Bank Brand Colors
 :root {
+  // Opt out of browser auto/forced dark mode — this app is light-themed only
+  color-scheme: only light;
   --usb-red: #CC0000;
   --usb-red-dark: #A30000;
   --usb-red-light: #E8000010;
