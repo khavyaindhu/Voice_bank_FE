@@ -430,14 +430,16 @@
   &:hover { background: rgba(255,255,255,.28); }
 }
 
+// Explicit hex colors + !important so browser forced-dark modes and
+// dark-theme extensions cannot invert the menu into white-on-white.
 .lang-dropdown {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  background: white;
+  background: #FFFFFF !important;
   border-radius: 10px;
   box-shadow: 0 4px 24px rgba(0,0,0,.18);
-  border: 1px solid var(--usb-gray-200);
+  border: 1px solid #E4E7EC;
   z-index: 200;
   min-width: 148px;
   overflow: hidden;
@@ -450,21 +452,27 @@
   gap: 8px;
   width: 100%;
   border: none;
-  background: white;
+  background: #FFFFFF !important;
   padding: 9px 13px;
   font-size: 13px;
-  color: var(--usb-gray-800);
+  color: #1F2937 !important;
   cursor: pointer;
   font-family: inherit;
   text-align: left;
 
-  &:hover { background: var(--usb-gray-50); }
-  &.active { background: #EEF2FF; color: var(--usb-navy); font-weight: 600; }
-  & + & { border-top: 1px solid var(--usb-gray-100); }
+  span { color: inherit; }
+
+  &:hover { background: #F3F4F6 !important; }
+  &.active {
+    background: #EEF2FF !important;
+    color: #002E6D !important;
+    font-weight: 600;
+  }
+  & + & { border-top: 1px solid #F0F2F5; }
 
   .lang-check {
     font-size: 14px;
-    color: #22C55E;
+    color: #16A34A !important;
     margin-left: auto;
   }
 }
