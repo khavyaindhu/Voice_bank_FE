@@ -75,6 +75,16 @@ export class ApiService {
     return this.http.post<CommandTranslateResponse>(`${this.base}/translate/to-english`, { text, sourceLanguage });
   }
 
+  // Config / feature flags
+  getConfig(): Observable<AppConfigResponse> {
+    return this.http.get<AppConfigResponse>(`${this.base}/config`);
+  }
+
+  // Text-to-speech (server-side synthesis, returns base64 MP3)
+  synthesizeSpeech(text: string, langCode: string): Observable<TtsResponse> {
+    return this.http.post<TtsResponse>(`${this.base}/tts`, { text, langCode });
+  }
+
   // ── Staff: Cards ────────────────────────────────────────────────────────
   getStaffCards(filters?: { status?: string; customerId?: string; search?: string }): Observable<StaffCard[]> {
     let params = new HttpParams();
@@ -212,6 +222,8 @@ export interface ChatPayload { message: string; screenContext: string; accountSu
 export interface ChatResponse { response: string; sessionId: string; navigateTo?: string | null; }
 export interface TranslateResponse { translatedText: string; language: string; }
 export interface CommandTranslateResponse { englishText: string; sourceLanguage: string; }
+export interface AppConfigResponse { features?: { googleTts?: boolean; serverTts?: boolean }; }
+export interface TtsResponse { audioContent?: string; voiceName?: string; fallback?: boolean; message?: string; }
 export interface TxResponse { message: string; transaction: Transaction; }
 
 export interface ApiPayee {

@@ -105,6 +105,13 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private ttsVoices: SpeechSynthesisVoice[] = [];
   private ttsUnavailableNoticeCodes = new Set<string>();
   /**
+   * Whether the backend /api/tts endpoint is available (Google Cloud TTS or
+   * the keyless translate fallback). Checked once via /api/config on init.
+   */
+  private serverTtsAvailable = false;
+  /** HTML5 Audio element used for server TTS playback */
+  private currentAudio: HTMLAudioElement | null = null;
+  /**
    * True between recognition.start() and the engine's onend event.
    * `isListening` only flips on onstart, which Edge fires late (after its
    * cloud speech session connects) — relying on it alone lets a second mic
@@ -193,11 +200,19 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.payeeSvc.load();
     this.initSpeechRecognition();
     this.initVoices();
+    // Check once whether server-side TTS is available — cached so speakMessage
+    // knows instantly whether to call /api/tts or use the browser voice.
+    this.api.getConfig().subscribe({
+      next:  cfg => { this.serverTtsAvailable = !!(cfg.features?.serverTts || cfg.features?.googleTts); },
+      error: ()  => { this.serverTtsAvailable = false; },
+    });
   }
 
   ngOnDestroy(): void {
     this.recognition?.abort();
     this.synth.cancel();
+    this.currentAudio?.pause();
+    this.currentAudio = null;
   }
 
   ngAfterViewChecked(): void {
@@ -1381,6 +1396,8 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   speakMessage(content: string): void {
     if (this.isSpeaking()) {
       this.synth.cancel();
+      this.currentAudio?.pause();
+      this.currentAudio = null;
       this.isSpeaking.set(false);
       return;
     }
@@ -1397,7 +1414,37 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     const lang = this.locale.selected();
     this.isSpeaking.set(true);
-    this.speakWithBrowser(plain, lang.speechCode, lang.label);
+
+    // English always has a local browser voice — skip the network round-trip.
+    // Non-English: prefer server-side TTS (works even when no local voice is
+    // installed, e.g. Tamil on a locked-down machine), fall back to browser.
+    if (lang.code === 'en' || !this.serverTtsAvailable) {
+      this.speakWithBrowser(plain, lang.speechCode, lang.label);
+      return;
+    }
+
+    this.api.synthesizeSpeech(plain, lang.code).subscribe({
+      next: res => {
+        if (res.fallback || !res.audioContent) {
+          this.speakWithBrowser(plain, lang.speechCode, lang.label);
+          return;
+        }
+        console.debug('[Maya TTS] server voice:', res.voiceName);
+        const audio = new Audio(`data:audio/mp3;base64,${res.audioContent}`);
+        this.currentAudio = audio;
+        audio.onended = () => { this.isSpeaking.set(false); this.currentAudio = null; };
+        audio.onerror = () => { this.isSpeaking.set(false); this.currentAudio = null; };
+        audio.play().catch(err => {
+          console.warn('[Maya TTS] audio playback failed, using browser voice', err);
+          this.currentAudio = null;
+          this.speakWithBrowser(plain, lang.speechCode, lang.label);
+        });
+      },
+      error: err => {
+        console.warn('[Maya TTS] server TTS failed, using browser voice', err);
+        this.speakWithBrowser(plain, lang.speechCode, lang.label);
+      },
+    });
   }
 
   /** Fallback: use the browser's Web Speech API with the best available voice */
