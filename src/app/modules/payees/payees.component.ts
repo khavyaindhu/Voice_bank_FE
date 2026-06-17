@@ -1,9 +1,9 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { lastValueFrom } from 'rxjs';
 import { ApiService, Account, CreatePayeePayload } from '../../core/services/api.service';
 import { PayeeService, Payee, TransferType, PayeeCategory } from '../../core/services/payee.service';
+import { PaymentHistoryService } from '../../core/services/payment-history.service';
 
 type ActiveView = 'list' | 'add' | 'pay';
 
@@ -35,6 +35,7 @@ interface AddForm {
 export class PayeesComponent implements OnInit {
   private api   = inject(ApiService);
   payeeSvc      = inject(PayeeService);
+  private paymentHistory = inject(PaymentHistoryService);
 
   // ── State ────────────────────────────────────────────────────────
   accounts  = signal<Account[]>([]);
@@ -184,31 +185,15 @@ export class PayeesComponent implements OnInit {
     const amount = parseFloat(this.payForm.amount);
 
     try {
-      let ref = '';
-
-      if (payee.transferType === 'wire') {
-        const res = await lastValueFrom(this.api.initiateWire({
-          fromAccount:   this.payForm.fromAccount,
-          recipientName: payee.fullName,
-          recipientBank: payee.bankName,
-          routingNumber: payee.routingNumber,
-          amount,
-          memo:          this.payForm.memo || `Quick Pay to ${payee.nickname}`,
-        }));
-        ref = res?.transaction?.referenceNumber ?? 'WIRE-REF';
-      } else {
-        const res = await lastValueFrom(this.api.initiateACH({
-          fromAccount:   this.payForm.fromAccount,
-          toAccount:     payee.accountNumber,
-          recipientName: payee.fullName,
-          routingNumber: payee.routingNumber,
-          amount,
-          memo:          this.payForm.memo || `Quick Pay to ${payee.nickname}`,
-        }));
-        ref = res?.transaction?.referenceNumber ?? 'ACH-REF';
-      }
-
-      await this.payeeSvc.recordPayment(payee.id, amount);
+      const memo = this.payForm.memo || `Quick Pay to ${payee.nickname}`;
+      const { transaction } = await this.payeeSvc.sendPayment(
+        payee,
+        amount,
+        this.payForm.fromAccount,
+        memo,
+      );
+      const ref = transaction?.referenceNumber ?? 'PAY-REF';
+      this.paymentHistory.notifyPaymentRecorded();
       this.payResult.set({ success: true, ref });
     } catch (err: any) {
       this.payResult.set({ success: false, ref: err?.error?.message ?? 'Payment failed.' });

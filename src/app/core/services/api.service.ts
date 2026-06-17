@@ -151,6 +151,14 @@ export class ApiService {
       `${this.base}/payees/${id}/record-payment`, { amount }
     );
   }
+  sendPayeePayment(
+    id: string,
+    payload: { amount: number; fromAccount: string; memo?: string },
+  ): Observable<TxResponse & { totalTransfers: number }> {
+    return this.http.post<TxResponse & { totalTransfers: number }>(
+      `${this.base}/payees/${id}/pay`, payload
+    );
+  }
 }
 
 // ---- Type definitions ----

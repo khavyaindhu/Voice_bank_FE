@@ -13,6 +13,7 @@ import { GuidedFlowService, FlowStep } from '../../core/services/guided-flow.ser
 import { LocalChatService } from '../../core/services/local-chat.service';
 import { EmergencyCardService } from '../../core/services/emergency-card.service';
 import { PayeeService, Payee } from '../../core/services/payee.service';
+import { PaymentHistoryService } from '../../core/services/payment-history.service';
 import { StaffContextService } from '../../core/services/staff-context.service';
 import { LocaleService } from '../../core/services/locale.service';
 
@@ -189,6 +190,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     private localChat: LocalChatService,
     public emergencyCard: EmergencyCardService,
     public payeeSvc: PayeeService,
+    private paymentHistory: PaymentHistoryService,
     private staffCtx: StaffContextService,
     public locale: LocaleService,
     private ngZone: NgZone,
@@ -386,11 +388,11 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (this.handleQuickPayResponse(commandMsg)) return;
 
     // ── Quick Pay: detect "send $X to [payee]" trigger ───────────────
-    // Pattern: send/pay/transfer + dollar amount + to + payee name
+    await this.payeeSvc.ensureLoaded();
     const qpMatch = commandMsg.match(
-      /(?:send|pay|transfer|wire)\s+\$?([\d,]+(?:\.\d+)?)\s+(?:to|for)\s+(.+)/i
+      /(?:can\s+you\s+)?(?:send|pay|transfer|wire)\s+(?:me\s+)?\$?([\d,]+(?:\.\d+)?)\s+(?:to|for)\s+(?:my\s+)?(.+)/i
     ) ?? commandMsg.match(
-      /(?:send|pay|transfer|wire)\s+(?:to\s+)?(.+?)\s+\$?([\d,]+(?:\.\d+)?)/i
+      /(?:can\s+you\s+)?(?:send|pay|transfer|wire)\s+(?:to\s+)?(?:my\s+)?(.+?)\s+\$?([\d,]+(?:\.\d+)?)/i
     );
     if (qpMatch) {
       // First pattern: amount is group 1, name is group 2
@@ -930,32 +932,18 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     try {
-      let ref = '';
-      if (payee.transferType === 'wire') {
-        const res = await lastValueFrom(this.api.initiateWire({
-          fromAccount:   fromAccountId,
-          recipientName: payee.fullName,
-          recipientBank: payee.bankName,
-          routingNumber: payee.routingNumber,
-          amount,
-          memo: `Quick Pay via Maya to ${payee.nickname}`,
-        }));
-        ref = res?.transaction?.referenceNumber ?? 'WIRE-REF';
-      } else {
-        const res = await lastValueFrom(this.api.initiateACH({
-          fromAccount:   fromAccountId,
-          toAccount:     payee.accountNumber,
-          recipientName: payee.fullName,
-          routingNumber: payee.routingNumber,
-          amount,
-          memo: `Quick Pay via Maya to ${payee.nickname}`,
-        }));
-        ref = res?.transaction?.referenceNumber ?? 'ACH-REF';
-      }
+      const memo = `Quick Pay via Maya to ${payee.nickname}`;
+      const { transaction } = await this.payeeSvc.sendPayment(
+        payee,
+        amount,
+        fromAccountId,
+        memo,
+      );
+      const ref = transaction?.referenceNumber ?? 'PAY-REF';
 
-      this.payeeSvc.recordPayment(payee.id, amount);
       this.quickPayPending.set(null);
       this.quickPayExecuting.set(false);
+      this.paymentHistory.notifyPaymentRecorded();
 
       const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
       const eta = payee.transferType === 'wire' ? 'same-day (before 4PM CT)' : '1–3 business days';

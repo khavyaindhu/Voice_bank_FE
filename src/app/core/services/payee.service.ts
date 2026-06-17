@@ -1,6 +1,6 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { lastValueFrom } from 'rxjs';
-import { ApiService, ApiPayee, CreatePayeePayload } from './api.service';
+import { ApiService, ApiPayee, CreatePayeePayload, Transaction } from './api.service';
 
 // ─── Public types (re-exported so components import from one place) ────────────
 
@@ -45,6 +45,22 @@ export class PayeeService {
   async reload(): Promise<void> {
     this._loaded.set(false);
     await this.load();
+  }
+
+  /** Wait until payees are loaded (for Maya voice Quick Pay). */
+  async ensureLoaded(): Promise<void> {
+    if (this._loaded()) return;
+    if (!this._loading()) {
+      await this.load();
+      return;
+    }
+    await new Promise<void>(resolve => {
+      const poll = () => {
+        if (!this._loading()) resolve();
+        else setTimeout(poll, 50);
+      };
+      poll();
+    });
   }
 
   // ── Read ───────────────────────────────────────────────────────────
@@ -101,6 +117,35 @@ export class PayeeService {
     } catch {
       // stats update is non-fatal — payment already went through
     }
+  }
+
+  /**
+   * Execute Quick Pay via backend — creates a transaction record and updates payee stats.
+   */
+  async sendPayment(
+    payee: Payee,
+    amount: number,
+    fromAccountId: string,
+    memo?: string,
+  ): Promise<{ transaction: Transaction; totalTransfers: number }> {
+    const res = await lastValueFrom(this.api.sendPayeePayment(payee.id, {
+      amount,
+      fromAccount: fromAccountId,
+      memo,
+    }));
+    this._payees.update(list =>
+      list.map(p =>
+        p.id === payee.id
+          ? {
+              ...p,
+              lastPaidAmount:  amount,
+              lastPaidDate:    new Date().toISOString().split('T')[0],
+              totalTransfers:  res.totalTransfers,
+            }
+          : p
+      )
+    );
+    return { transaction: res.transaction, totalTransfers: res.totalTransfers };
   }
 
   // ── Static helpers (no API needed) ────────────────────────────────

@@ -1,7 +1,10 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter, Subscription } from 'rxjs';
 import { ApiService, Transaction } from '../../../core/services/api.service';
+import { PaymentHistoryService } from '../../../core/services/payment-history.service';
 
 @Component({
   selector: 'app-history',
@@ -10,7 +13,7 @@ import { ApiService, Transaction } from '../../../core/services/api.service';
   templateUrl: './history.component.html',
   styleUrl: './history.component.scss',
 })
-export class HistoryComponent implements OnInit {
+export class HistoryComponent implements OnInit, OnDestroy {
   transactions = signal<Transaction[]>([]);
   total = signal(0);
   page = signal(1);
@@ -20,9 +23,33 @@ export class HistoryComponent implements OnInit {
 
   types = ['', 'ach', 'wire', 'zelle', 'card_payment'];
 
-  constructor(private api: ApiService) {}
+  private subs = new Subscription();
 
-  ngOnInit(): void { this.load(); }
+  constructor(
+    private api: ApiService,
+    private router: Router,
+    private paymentHistory: PaymentHistoryService,
+  ) {}
+
+  ngOnInit(): void {
+    this.load();
+    this.subs.add(
+      this.paymentHistory.onPaymentRecorded.subscribe(() => this.load())
+    );
+    this.subs.add(
+      this.router.events
+        .pipe(filter(e => e instanceof NavigationEnd))
+        .subscribe(() => {
+          if (this.router.url.includes('/payments/history') || this.router.url.includes('/transactions')) {
+            this.load();
+          }
+        })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subs.unsubscribe();
+  }
 
   load(): void {
     this.loading.set(true);
