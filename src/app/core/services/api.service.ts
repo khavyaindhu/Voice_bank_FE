@@ -159,6 +159,50 @@ export class ApiService {
       `${this.base}/payees/${id}/pay`, payload
     );
   }
+
+  // Recurring payment buckets
+  getRecurringBuckets(): Observable<RecurringBucket[]> {
+    return this.http.get<RecurringBucket[]>(`${this.base}/recurring-buckets`);
+  }
+  getRecurringBucket(id: string): Observable<RecurringBucket> {
+    return this.http.get<RecurringBucket>(`${this.base}/recurring-buckets/${id}`);
+  }
+  createRecurringBucket(payload: CreateRecurringBucketPayload): Observable<{ message: string; bucket: RecurringBucket }> {
+    return this.http.post<{ message: string; bucket: RecurringBucket }>(`${this.base}/recurring-buckets`, payload);
+  }
+  updateRecurringBucket(id: string, payload: Partial<CreateRecurringBucketPayload>): Observable<{ message: string; bucket: RecurringBucket }> {
+    return this.http.patch<{ message: string; bucket: RecurringBucket }>(`${this.base}/recurring-buckets/${id}`, payload);
+  }
+  deleteRecurringBucket(id: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.base}/recurring-buckets/${id}`);
+  }
+  addRecurringItem(bucketId: string, payload: CreateRecurringItemPayload): Observable<{ message: string; bucket: RecurringBucket }> {
+    return this.http.post<{ message: string; bucket: RecurringBucket }>(
+      `${this.base}/recurring-buckets/${bucketId}/items`, payload
+    );
+  }
+  updateRecurringItem(
+    bucketId: string,
+    itemId: string,
+    payload: Partial<CreateRecurringItemPayload> & { amountDelta?: number },
+  ): Observable<{ message: string; bucket: RecurringBucket }> {
+    return this.http.patch<{ message: string; bucket: RecurringBucket }>(
+      `${this.base}/recurring-buckets/${bucketId}/items/${itemId}`, payload
+    );
+  }
+  deleteRecurringItem(bucketId: string, itemId: string): Observable<{ message: string; bucket: RecurringBucket }> {
+    return this.http.delete<{ message: string; bucket: RecurringBucket }>(
+      `${this.base}/recurring-buckets/${bucketId}/items/${itemId}`
+    );
+  }
+  payAllRecurringBucket(
+    bucketId: string,
+    fromAccount: string,
+  ): Observable<RecurringPayAllResponse> {
+    return this.http.post<RecurringPayAllResponse>(
+      `${this.base}/recurring-buckets/${bucketId}/pay-all`, { fromAccount }
+    );
+  }
 }
 
 // ---- Type definitions ----
@@ -267,6 +311,53 @@ export interface CreatePayeePayload {
   accountType: 'checking' | 'savings';
   transferType: 'wire' | 'ach';
   category: 'business' | 'personal' | 'family' | 'utility';
+}
+
+export type RecurringCategory = 'rent' | 'emi' | 'subscription' | 'utility' | 'maintenance' | 'other';
+
+export interface RecurringItem {
+  id: string;
+  name: string;
+  category: RecurringCategory;
+  amount: number;
+  payeeId?: string;
+  dayOfMonth?: number;
+  aliases: string[];
+  notes?: string;
+}
+
+export interface RecurringBucket {
+  id: string;
+  name: string;
+  nickname: string;
+  description?: string;
+  avatarColor: string;
+  items: RecurringItem[];
+  totalMonthly: number;
+}
+
+export interface CreateRecurringBucketPayload {
+  name: string;
+  nickname: string;
+  description?: string;
+}
+
+export interface CreateRecurringItemPayload {
+  name: string;
+  category: RecurringCategory;
+  amount: number;
+  payeeId?: string;
+  dayOfMonth?: number;
+  aliases?: string[];
+  notes?: string;
+}
+
+export interface RecurringPayAllResponse {
+  message: string;
+  bucket: RecurringBucket;
+  transactions: Transaction[];
+  errors: string[];
+  totalPaid: number;
 }
 
 // ── Staff types ──────────────────────────────────────────────────────────────

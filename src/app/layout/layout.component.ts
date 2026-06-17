@@ -40,6 +40,7 @@ export class LayoutComponent implements OnInit {
     },
     { label: 'Transactions', icon: 'receipt_long', route: '/payments/history' },
     { label: 'Quick Pay', icon: 'contacts',     route: '/payees' },
+    { label: 'Recurring Bills', icon: 'event_repeat', route: '/recurring-buckets' },
     { label: 'Cards',     icon: 'credit_card',  route: '/cards' },
     { label: 'Loans',     icon: 'home',         route: '/loans' },
   ];

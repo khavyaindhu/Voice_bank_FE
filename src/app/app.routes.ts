@@ -59,6 +59,11 @@ export const routes: Routes = [
         data: { screen: 'payees' },
       },
       {
+        path: 'recurring-buckets',
+        loadComponent: () => import('./modules/recurring-buckets/recurring-buckets.component').then(m => m.RecurringBucketsComponent),
+        data: { screen: 'recurring-buckets' },
+      },
+      {
         path: 'transactions',
         redirectTo: 'payments/history',
         pathMatch: 'full',

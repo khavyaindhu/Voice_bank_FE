@@ -1,0 +1,228 @@
+<div class="page-header">
+  <h2>Recurring Bills</h2>
+  <p>Group monthly rent, EMIs, utilities, and subscriptions into buckets — pay them all in one tap or one voice command.</p>
+</div>
+
+@if (bucketSvc.loading()) {
+  <div class="loading-state">Loading your recurring buckets…</div>
+} @else if (bucketSvc.buckets().length === 0) {
+  <div class="empty-state card">
+    <span class="material-icons">event_repeat</span>
+    <p>No recurring buckets yet. Run the backend seed script to load demo Bucket A.</p>
+  </div>
+} @else {
+  <div class="layout">
+  <!-- Bucket list -->
+  <aside class="bucket-list card">
+    <div class="aside-title">Your Buckets</div>
+    @for (b of bucketSvc.buckets(); track b.id) {
+      <button
+        type="button"
+        class="bucket-card"
+        [class.active]="selectedId() === b.id"
+        (click)="selectBucket(b.id)"
+      >
+        <div class="bucket-avatar" [style.background]="b.avatarColor">{{ b.nickname }}</div>
+        <div class="bucket-meta">
+          <div class="bucket-name">{{ b.name }}</div>
+          <div class="bucket-sub">{{ b.items.length }} bills · {{ formatAmount(b.totalMonthly) }}/mo</div>
+        </div>
+      </button>
+    }
+  </aside>
+
+  <!-- Bucket detail -->
+  @if (selected; as bucket) {
+    <section class="bucket-detail card">
+      <div class="detail-header">
+        <div>
+          <h3>{{ bucket.name }}</h3>
+          <p class="detail-sub">Voice alias: <strong>Bucket {{ bucket.nickname }}</strong> · {{ formatAmount(bucket.totalMonthly) }} per month</p>
+          @if (bucket.description) {
+            <p class="detail-desc">{{ bucket.description }}</p>
+          }
+        </div>
+        <div class="header-actions">
+          <button type="button" class="btn-outline" (click)="startAddItem()">
+            <span class="material-icons">add</span> Add bill
+          </button>
+          <button type="button" class="btn-primary" [disabled]="payingAll() || bucket.items.length === 0" (click)="openPayAllReview()">
+            @if (payingAll()) { Processing… }
+            @else {
+              <span class="material-icons">payments</span> Review & pay Bucket {{ bucket.nickname }}
+            }
+          </button>
+        </div>
+      </div>
+
+      @if (showPayAllReview() && bucket.items.length > 0) {
+        <div class="review-overlay" (click)="cancelPayAllReview()">
+          <div class="review-panel card" (click)="$event.stopPropagation()">
+            <div class="review-header">
+              <h4>Review payments — Bucket {{ bucket.nickname }}</h4>
+              <p>Confirm each bill below before sending. Nothing is charged until you click <strong>Confirm & Pay All</strong>.</p>
+            </div>
+
+            <table class="review-table">
+              <thead>
+                <tr>
+                  <th>Bill</th>
+                  <th>Category</th>
+                  <th>Due</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of bucket.items; track item.id) {
+                  <tr>
+                    <td>
+                      <div class="item-name">{{ item.name }}</div>
+                      @if (item.notes) { <small>{{ item.notes }}</small> }
+                    </td>
+                    <td>{{ catLabel(item.category) }}</td>
+                    <td>{{ item.dayOfMonth ? 'Day ' + item.dayOfMonth : '—' }}</td>
+                    <td class="amount-cell">{{ formatAmount(item.amount) }}</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3"><strong>Total due now</strong></td>
+                  <td class="amount-cell"><strong>{{ formatAmount(bucket.totalMonthly) }}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div class="review-meta">
+              <span class="material-icons">account_balance</span>
+              Pay from: <strong>{{ debitAccountLabel() }}</strong>
+            </div>
+
+            <div class="review-actions">
+              <button type="button" class="btn-outline" (click)="cancelPayAllReview()">Cancel</button>
+              <button type="button" class="btn-primary" [disabled]="payingAll()" (click)="confirmPayAll()">
+                @if (payingAll()) {
+                  Processing all payments…
+                } @else {
+                  <span class="material-icons">done_all</span> Confirm & Pay All
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (payResult()) {
+        <div class="alert-success">{{ payResult() }}</div>
+      }
+
+      @if (showAddItem()) {
+        <div class="item-form card-inner">
+          <h4>{{ editItemId() ? 'Edit bill' : 'Add recurring bill' }}</h4>
+          <div class="form-grid">
+            <label>
+              Name
+              <input [(ngModel)]="itemForm.name" placeholder="e.g. House Rent" />
+            </label>
+            <label>
+              Category
+              <select [(ngModel)]="itemForm.category">
+                @for (c of categories; track c.value) {
+                  <option [value]="c.value">{{ c.label }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              Monthly amount
+              <input type="number" [(ngModel)]="itemForm.amount" min="0" step="0.01" />
+            </label>
+            <label>
+              Due day (1–31)
+              <input type="number" [(ngModel)]="itemForm.dayOfMonth" min="1" max="31" />
+            </label>
+            <label class="full">
+              Link payee (optional)
+              <select [(ngModel)]="itemForm.payeeId">
+                <option value="">— None —</option>
+                @for (p of payeeSvc.payees(); track p.id) {
+                  <option [value]="p.id">{{ p.nickname }} ({{ p.bankName }})</option>
+                }
+              </select>
+            </label>
+            <label class="full">
+              Notes
+              <input [(ngModel)]="itemForm.notes" placeholder="Optional" />
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-outline" (click)="cancelItemForm()">Cancel</button>
+            <button type="button" class="btn-primary" (click)="saveItem()">Save</button>
+          </div>
+        </div>
+      }
+
+      @if (bucket.items.length === 0) {
+        <div class="empty-items">No bills in this bucket yet.</div>
+      } @else {
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Bill</th>
+              <th>Category</th>
+              <th>Due day</th>
+              <th>Amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of bucket.items; track item.id) {
+              <tr [class.flash-row]="isFlashing(item.id)">
+                <td>
+                  <div class="item-name">{{ item.name }}</div>
+                  @if (item.notes) { <small>{{ item.notes }}</small> }
+                </td>
+                <td>
+                  <span class="cat-chip">
+                    <span class="material-icons">{{ catIcon(item.category) }}</span>
+                    {{ catLabel(item.category) }}
+                  </span>
+                </td>
+                <td>{{ item.dayOfMonth ? 'Day ' + item.dayOfMonth : '—' }}</td>
+                <td class="amount-cell">{{ formatAmount(item.amount) }}</td>
+                <td class="row-actions">
+                  <button type="button" class="icon-btn" title="Edit" (click)="startEditItem(item)">
+                    <span class="material-icons">edit</span>
+                  </button>
+                  <button type="button" class="icon-btn danger" title="Remove" (click)="removeItem(item)">
+                    <span class="material-icons">delete</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3"><strong>Monthly total</strong></td>
+              <td class="amount-cell"><strong>{{ formatAmount(bucket.totalMonthly) }}</strong></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      }
+
+      <div class="voice-hints card-inner">
+        <span class="material-icons">mic</span>
+        <div>
+          <strong>Maya voice examples</strong>
+          <ul>
+            <li>"List all recurring payments in bucket {{ bucket.nickname }}"</li>
+            <li>"Pay all payments in bucket {{ bucket.nickname }}" — review first, then confirm</li>
+            <li>"House owner increased rent by 1000"</li>
+            <li>"I completed paying my car EMI"</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  }
+  </div>
+}

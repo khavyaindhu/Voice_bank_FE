@@ -153,6 +153,58 @@
                   </div>
                   <!-- ── / Emergency Card Widget ────────────────────────── -->
 
+                } @else if (msg.type === 'bucket-pay-confirm' && msg.bucketPay) {
+                  <!-- ── Bucket Pay-All Review Widget ─────────────────── -->
+                  <div class="qp-widget bucket-pay-widget">
+                    <div class="bp-header">
+                      <span class="material-icons">event_repeat</span>
+                      <div>
+                        <div class="bp-title">Bucket {{ msg.bucketPay.bucketNickname }}</div>
+                        <div class="bp-sub">{{ msg.bucketPay.bucketName }}</div>
+                      </div>
+                      <div class="qp-amount">{{ formatCurrency(msg.bucketPay.totalMonthly) }}</div>
+                    </div>
+
+                    <div class="bp-items">
+                      @for (item of msg.bucketPay.items; track item.id) {
+                        <div class="bp-item-row">
+                          <span class="material-icons bp-item-icon">{{ bucketItemIcon(item.category) }}</span>
+                          <div class="bp-item-info">
+                            <div class="bp-item-name">{{ item.name }}</div>
+                            <div class="bp-item-cat">{{ item.category }}</div>
+                          </div>
+                          <div class="bp-item-amt">{{ formatCurrency(item.amount) }}</div>
+                        </div>
+                      }
+                    </div>
+
+                    <div class="qp-details">
+                      <div class="qp-detail-row">
+                        <span class="qp-detail-label">Payments</span>
+                        <span class="qp-detail-val">{{ msg.bucketPay.items.length }} bills</span>
+                      </div>
+                      <div class="qp-detail-row">
+                        <span class="qp-detail-label">Method</span>
+                        <span class="qp-detail-val">ACH (1–3 business days)</span>
+                      </div>
+                    </div>
+
+                    @if (!bucketPayExecuting()) {
+                      <div class="qp-footer">
+                        <button class="qp-btn-cancel" (click)="cancelBucketPayAll()">Cancel</button>
+                        <button class="qp-btn-confirm" (click)="executeBucketPayAll(msg)">
+                          <span class="material-icons">done_all</span>
+                          Confirm & Pay All
+                        </button>
+                      </div>
+                    } @else {
+                      <div class="qp-executing">
+                        <span class="ec-spinner"></span>
+                        <span>Processing all payments…</span>
+                      </div>
+                    }
+                  </div>
+
                 } @else if (msg.type === 'quick-pay-confirm' && msg.quickPay) {
                   <!-- ── Quick Pay Confirm Widget ─────────────────────── -->
                   <div class="qp-widget">

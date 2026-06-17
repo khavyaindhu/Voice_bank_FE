@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { marked } from 'marked';
-import { ApiService, Account } from '../../core/services/api.service';
+import { ApiService, Account, RecurringBucket, RecurringItem } from '../../core/services/api.service';
 import { ScreenContextService } from '../../core/services/screen-context.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FormFillService } from '../../core/services/form-fill.service';
@@ -14,6 +14,8 @@ import { LocalChatService } from '../../core/services/local-chat.service';
 import { EmergencyCardService } from '../../core/services/emergency-card.service';
 import { PayeeService, Payee } from '../../core/services/payee.service';
 import { PaymentHistoryService } from '../../core/services/payment-history.service';
+import { RecurringBucketService } from '../../core/services/recurring-bucket.service';
+import { RecurringBucketContextService } from '../../core/services/recurring-bucket-context.service';
 import { StaffContextService } from '../../core/services/staff-context.service';
 import { LocaleService } from '../../core/services/locale.service';
 
@@ -28,9 +30,18 @@ export interface ChatMessage {
   timestamp: Date;
   screenContext?: string;
   /** Special bubble types for interactive widgets */
-  type?: 'normal' | 'emergency-options' | 'quick-pay-confirm';
+  type?: 'normal' | 'emergency-options' | 'quick-pay-confirm' | 'bucket-pay-confirm';
   /** Attached quick-pay payload for the confirm widget */
   quickPay?: { payee: Payee; amount: number; fromAccountId: string };
+  /** Recurring bucket pay-all review widget */
+  bucketPay?: {
+    bucketId: string;
+    bucketName: string;
+    bucketNickname: string;
+    items: RecurringItem[];
+    totalMonthly: number;
+    fromAccountId: string;
+  };
 }
 
 /** One of the three emergency card actions */
@@ -91,6 +102,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   /** Set while waiting for user to confirm a quick-pay from Maya */
   quickPayPending = signal<{ payee: Payee; amount: number } | null>(null);
   quickPayExecuting = signal(false);
+  bucketPayExecuting = signal(false);
 
   /** True when no action card is selected — used to disable the "Execute Selected" button. */
   get noActionsSelected(): boolean {
@@ -167,6 +179,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       'payments/history':   'Transaction History',
       'accounts':           'Accounts',
       'payees':             'Quick Pay',
+      'recurring-buckets':  'Recurring Bills',
       'cards':              'Cards',
       'loans':              'Loans',
       'loans/apply':        'Loan Application',
@@ -191,6 +204,8 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     public emergencyCard: EmergencyCardService,
     public payeeSvc: PayeeService,
     private paymentHistory: PaymentHistoryService,
+    private recurringBucketSvc: RecurringBucketService,
+    private recurringBucketCtx: RecurringBucketContextService,
     private staffCtx: StaffContextService,
     public locale: LocaleService,
     private ngZone: NgZone,
@@ -200,6 +215,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.api.getAccounts().subscribe({ next: a => this.accounts.set(a), error: () => {} });
     // Pre-load payees so Maya can do Quick Pay from any screen
     this.payeeSvc.load();
+    this.recurringBucketSvc.load();
     this.initSpeechRecognition();
     this.initVoices();
     // Check once whether server-side TTS is available — cached so speakMessage
@@ -384,8 +400,14 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     // ── Staff intents: navigate + pre-fill staff screens ────────────
     if (this.role === 'staff' && this.handleStaffIntent(commandMsg)) return;
 
+    // ── Recurring bill buckets (customer) ───────────────────────────
+    if (this.role === 'customer' && await this.handleRecurringBucketIntent(commandMsg)) return;
+
     // ── Quick Pay: intercept active-flow replies ─────────────────────
     if (this.handleQuickPayResponse(commandMsg)) return;
+
+    // ── Bucket pay-all: voice confirm / cancel while review widget open ─
+    if (this.handleBucketPayResponse(commandMsg)) return;
 
     // ── Quick Pay: detect "send $X to [payee]" trigger ───────────────
     await this.payeeSvc.ensureLoaded();
@@ -493,6 +515,118 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       type:        'emergency-options' as const,
     }]);
     this.shouldScrollToBottom = true;
+  }
+
+  // ── Recurring payment buckets (customer) ─────────────────────────────────
+
+  private async handleRecurringBucketIntent(msg: string): Promise<boolean> {
+    await this.recurringBucketSvc.ensureLoaded();
+    const lower = msg.toLowerCase().trim();
+
+    const extractBucketNick = (): string | null => {
+      const m = lower.match(/bucket\s+([a-z0-9]+)/i);
+      return m ? m[1] : null;
+    };
+
+    // Pay all in bucket A
+    if (
+      /pay\s+all|make\s+all|process\s+all|send\s+all/i.test(lower) &&
+      (/bucket|recurring|bills?/i.test(lower))
+    ) {
+      const nick = extractBucketNick() ?? 'a';
+      const bucket = this.recurringBucketSvc.findByNickname(nick);
+      if (!bucket) {
+        this.addAssistantMessage(`I couldn't find bucket **${nick}**. Try *"list recurring payments in bucket A"*.`);
+        return true;
+      }
+      this.router.navigate(['/recurring-buckets']);
+      setTimeout(() => this.recurringBucketCtx.requestPayAllReview(bucket.nickname), 400);
+      this.startBucketPayReview(bucket);
+      return true;
+    }
+
+    // List / show recurring payments in bucket
+    if (
+      /(list|show|display|open|view)/i.test(lower) &&
+      /(recurring|bucket|monthly\s+bills?)/i.test(lower)
+    ) {
+      const nick = extractBucketNick() ?? 'a';
+      const bucket = this.recurringBucketSvc.findByNickname(nick);
+      if (!bucket) {
+        this.addAssistantMessage(`No bucket matching **${nick}** found.`);
+        return true;
+      }
+      this.recurringBucketCtx.openBucket(bucket.nickname);
+      this.router.navigate(['/recurring-buckets']);
+      const lines = bucket.items.map(i =>
+        `- **${i.name}** — ${this.formatCurrency(i.amount)} (${i.category})`
+      ).join('\n');
+      this.addAssistantMessage(
+        `**Bucket ${bucket.nickname}** — ${bucket.name}\n\n` +
+        `${lines}\n\n**Monthly total:** ${this.formatCurrency(bucket.totalMonthly)}`
+      );
+      return true;
+    }
+
+    // Landlord / rent increase by N
+    const landlordInc = lower.match(
+      /(?:house owner|landlord|owner).*(?:increased|raised|hiked).*(?:rent)?.*by\s+\$?([\d,]+)/i
+    );
+    if (landlordInc) {
+      const delta = parseFloat(landlordInc[1].replace(/,/g, ''));
+      const found = this.recurringBucketSvc.findItemByPhrase('rent');
+      if (found && delta > 0) {
+        const updated = await this.recurringBucketSvc.updateItem(found.bucket.id, found.item.id, { amountDelta: delta });
+        const item = updated.items.find(i => i.id === found.item.id);
+        this.recurringBucketCtx.openBucket(found.bucket.nickname);
+        this.recurringBucketCtx.flashItem(found.item.id);
+        this.router.navigate(['/recurring-buckets']);
+        this.addAssistantMessage(
+          `Updated **${found.item.name}** in Bucket ${found.bucket.nickname}: ` +
+          `+${this.formatCurrency(delta)} → **${this.formatCurrency(item?.amount ?? found.item.amount + delta)}**/month.`
+        );
+        return true;
+      }
+    }
+
+    const incMatch =
+      lower.match(/(?:increased|raised|hiked)\s+(?:the\s+)?(.+?)\s+by\s+\$?([\d,]+)/i) ??
+      lower.match(/(.+?)\s+(?:increased|raised|hiked)\s+by\s+\$?([\d,]+)/i);
+    if (incMatch) {
+      const phrase = incMatch[1].trim();
+      const delta = parseFloat(incMatch[2].replace(/,/g, ''));
+      const found = this.recurringBucketSvc.findItemByPhrase(phrase);
+      if (found && delta > 0) {
+        const updated = await this.recurringBucketSvc.updateItem(found.bucket.id, found.item.id, { amountDelta: delta });
+        const item = updated.items.find(i => i.id === found.item.id);
+        this.recurringBucketCtx.openBucket(found.bucket.nickname);
+        this.recurringBucketCtx.flashItem(found.item.id);
+        this.router.navigate(['/recurring-buckets']);
+        this.addAssistantMessage(
+          `Updated **${found.item.name}**: +${this.formatCurrency(delta)} → ` +
+          `**${this.formatCurrency(item?.amount ?? found.item.amount + delta)}**/month.`
+        );
+        return true;
+      }
+    }
+
+    // Completed / paid — remove item (e.g. car EMI finished)
+    if (/(completed|finished|done|paid)/i.test(lower) && /(emi|payment|bill|rent|netflix|hotstar)/i.test(lower)) {
+      const tail = lower.replace(/^.*?(?:completed|finished|done|paid)\s+(?:paying|with|all\s+of\s+my\s+)?/i, '');
+      const found = this.recurringBucketSvc.findItemByPhrase(tail) ??
+        this.recurringBucketSvc.findItemByPhrase(lower);
+      if (found) {
+        await this.recurringBucketSvc.deleteItem(found.bucket.id, found.item.id);
+        this.recurringBucketCtx.openBucket(found.bucket.nickname);
+        this.router.navigate(['/recurring-buckets']);
+        this.addAssistantMessage(
+          `Removed **${found.item.name}** from Bucket ${found.bucket.nickname} — marked as completed this month. ✅`
+        );
+        return true;
+      }
+    }
+
+    return false;
   }
 
   // ── Staff Intent Detection ───────────────────────────────────────────────
@@ -973,6 +1107,87 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     );
   }
 
+  // ── Recurring bucket pay-all review (Maya widget) ───────────────────────
+
+  startBucketPayReview(bucket: RecurringBucket): void {
+    let fromAccountId = this.pickDebitAccount();
+    if (!fromAccountId && this.accounts().length === 0) {
+      this.api.getAccounts().subscribe({
+        next: a => {
+          this.accounts.set(a);
+          fromAccountId = this.pickDebitAccount();
+          if (fromAccountId) this._showBucketPayWidget(bucket, fromAccountId);
+          else this.addAssistantMessage('❌ No debit account found to pay from.');
+        },
+        error: () => this.addAssistantMessage('❌ Unable to load accounts.'),
+      });
+      return;
+    }
+    if (!fromAccountId) {
+      this.addAssistantMessage('❌ No debit account found to pay from.');
+      return;
+    }
+    this._showBucketPayWidget(bucket, fromAccountId);
+  }
+
+  private _showBucketPayWidget(bucket: RecurringBucket, fromAccountId: string): void {
+    this.addAssistantMessage(
+      `Review all **${bucket.items.length}** payments in **Bucket ${bucket.nickname}** below. ` +
+      `Total: **${this.formatCurrency(bucket.totalMonthly)}** — confirm when ready.`
+    );
+    this.messages.update(msgs => [...msgs, {
+      role:        'assistant' as const,
+      content:     '',
+      htmlContent: '',
+      timestamp:   new Date(),
+      type:        'bucket-pay-confirm' as const,
+      bucketPay:   {
+        bucketId:       bucket.id,
+        bucketName:     bucket.name,
+        bucketNickname: bucket.nickname,
+        items:          bucket.items,
+        totalMonthly:   bucket.totalMonthly,
+        fromAccountId,
+      },
+    }]);
+    this.shouldScrollToBottom = true;
+  }
+
+  async executeBucketPayAll(msg: ChatMessage): Promise<void> {
+    const bp = msg.bucketPay;
+    if (!bp || this.bucketPayExecuting()) return;
+    this.bucketPayExecuting.set(true);
+
+    try {
+      const res = await this.recurringBucketSvc.payAll(bp.bucketId, bp.fromAccountId);
+      this.paymentHistory.notifyPaymentRecorded();
+      this.bucketPayExecuting.set(false);
+      this.addAssistantMessage(
+        `✅ **Bucket ${bp.bucketNickname} — Payment complete!**\n\n` +
+        `Paid **${res.transactions.length}** bills · **${this.formatCurrency(res.totalPaid)}** total.\n` +
+        (res.errors.length ? `⚠️ ${res.errors.length} item(s) skipped.\n` : '') +
+        `\n_View Transaction History for details._`
+      );
+    } catch (err: unknown) {
+      this.bucketPayExecuting.set(false);
+      const message = (err as { error?: { message?: string } })?.error?.message ?? 'Pay-all failed.';
+      this.addAssistantMessage(`⚠️ ${message}`);
+    }
+  }
+
+  cancelBucketPayAll(): void {
+    this.bucketPayExecuting.set(false);
+    this.addAssistantMessage('Bucket payment cancelled — nothing was charged.');
+  }
+
+  bucketItemIcon(category: string): string {
+    const m: Record<string, string> = {
+      rent: 'home', emi: 'directions_car', subscription: 'movie',
+      utility: 'bolt', maintenance: 'build', other: 'receipt',
+    };
+    return m[category] ?? 'receipt';
+  }
+
   /** Intercepts user text replies while quick-pay confirm is on screen. */
   private handleQuickPayResponse(msg: string): boolean {
     if (!this.quickPayPending() || this.quickPayExecuting()) return false;
@@ -983,9 +1198,26 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       return true;
     }
     if (/\b(yes|confirm|ok|sure|go\s*ahead|proceed|yep|yeah|do\s*it|send\s*it|execute)\b/.test(lower)) {
-      // Find the confirm widget message and trigger execute
       const confirmMsg = this.messages().find(m => m.type === 'quick-pay-confirm' && m.quickPay);
       if (confirmMsg) this.executeQuickPay(confirmMsg);
+      return true;
+    }
+    return false;
+  }
+
+  /** Voice/text confirm while bucket pay-all review widget is open. */
+  private handleBucketPayResponse(msg: string): boolean {
+    const hasWidget = this.messages().some(m => m.type === 'bucket-pay-confirm' && m.bucketPay);
+    if (!hasWidget || this.bucketPayExecuting()) return false;
+    const lower = msg.toLowerCase().trim();
+
+    if (/^(cancel|stop|no|nope|abort|never\s*mind)$/.test(lower)) {
+      this.cancelBucketPayAll();
+      return true;
+    }
+    if (/\b(yes|confirm|ok|sure|go\s*ahead|proceed|yep|yeah|do\s*it|pay\s*all|execute)\b/.test(lower)) {
+      const confirmMsg = this.messages().find(m => m.type === 'bucket-pay-confirm' && m.bucketPay);
+      if (confirmMsg) this.executeBucketPayAll(confirmMsg);
       return true;
     }
     return false;
