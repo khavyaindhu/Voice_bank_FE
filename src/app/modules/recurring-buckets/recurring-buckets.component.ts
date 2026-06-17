@@ -1,4 +1,4 @@
-import { Component, OnInit, effect, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Account, CreateRecurringItemPayload, RecurringBucket, RecurringCategory, RecurringItem } from '../../core/services/api.service';
@@ -23,6 +23,12 @@ export class RecurringBucketsComponent implements OnInit {
 
   accounts = signal<Account[]>([]);
   selectedId = signal<string | null>(null);
+  /** Reactive selected bucket — required so @if in template updates when auto-selected. */
+  readonly selectedBucket = computed(() => {
+    const id = this.selectedId();
+    if (!id) return undefined;
+    return this.bucketSvc.buckets().find(b => b.id === id);
+  });
   payingAll = signal(false);
   payResult = signal<string | null>(null);
   showPayAllReview = signal(false);
@@ -46,21 +52,7 @@ export class RecurringBucketsComponent implements OnInit {
     effect(() => {
       const buckets = this.bucketSvc.buckets();
       if (buckets.length === 0) return;
-
-      const nick = this.bucketCtx.viewBucketNickname();
-      if (nick) {
-        const bucket = this.bucketSvc.findByNickname(nick);
-        if (bucket) {
-          this.selectedId.set(bucket.id);
-          this.bucketCtx.viewBucketNickname.set('');
-        }
-        return;
-      }
-
-      const current = this.selectedId();
-      if (!current || !buckets.some(b => b.id === current)) {
-        this.selectDefaultBucket(buckets);
-      }
+      this.ensureBucketSelected(buckets);
     });
 
     effect(() => {
@@ -78,7 +70,27 @@ export class RecurringBucketsComponent implements OnInit {
   ngOnInit(): void {
     this.api.getAccounts().subscribe({ next: a => this.accounts.set(a), error: () => {} });
     this.payeeSvc.load();
-    this.bucketSvc.reload();
+    this.bucketSvc.reload().then(() => this.ensureBucketSelected(this.bucketSvc.buckets()));
+  }
+
+  /** Select Maya’s bucket or default to Bucket A / first bucket. */
+  private ensureBucketSelected(buckets: RecurringBucket[]): void {
+    if (buckets.length === 0) return;
+
+    const nick = this.bucketCtx.viewBucketNickname();
+    if (nick) {
+      const byVoice = this.bucketSvc.findByNickname(nick);
+      if (byVoice) {
+        this.selectedId.set(byVoice.id);
+        this.bucketCtx.viewBucketNickname.set('');
+        return;
+      }
+    }
+
+    const current = this.selectedId();
+    if (!current || !buckets.some(b => b.id === current)) {
+      this.selectDefaultBucket(buckets);
+    }
   }
 
   /** Prefer Bucket A when present; otherwise first bucket. */
@@ -88,11 +100,6 @@ export class RecurringBucketsComponent implements OnInit {
       buckets.find(b => b.name.toLowerCase().includes('bucket a')) ??
       buckets[0];
     if (preferred) this.selectedId.set(preferred.id);
-  }
-
-  get selected(): RecurringBucket | undefined {
-    const id = this.selectedId();
-    return this.bucketSvc.buckets().find(b => b.id === id);
   }
 
   selectBucket(id: string): void {
@@ -133,7 +140,7 @@ export class RecurringBucketsComponent implements OnInit {
   }
 
   openPayAllReview(): void {
-    const bucket = this.selected;
+    const bucket = this.selectedBucket();
     if (!bucket || bucket.items.length === 0) return;
     this.payResult.set(null);
     this.showPayAllReview.set(true);
@@ -144,7 +151,7 @@ export class RecurringBucketsComponent implements OnInit {
   }
 
   async confirmPayAll(): Promise<void> {
-    const bucket = this.selected;
+    const bucket = this.selectedBucket();
     if (!bucket || this.payingAll()) return;
 
     const fromAccount = this.pickDebitAccount();
@@ -199,7 +206,7 @@ export class RecurringBucketsComponent implements OnInit {
   }
 
   async saveItem(): Promise<void> {
-    const bucket = this.selected;
+    const bucket = this.selectedBucket();
     if (!bucket || !this.itemForm.name.trim() || !this.itemForm.amount) return;
 
     try {
@@ -215,7 +222,7 @@ export class RecurringBucketsComponent implements OnInit {
   }
 
   async removeItem(item: RecurringItem): Promise<void> {
-    const bucket = this.selected;
+    const bucket = this.selectedBucket();
     if (!bucket) return;
     await this.bucketSvc.deleteItem(bucket.id, item.id);
   }
