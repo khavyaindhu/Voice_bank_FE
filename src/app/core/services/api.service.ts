@@ -127,6 +127,14 @@ export class ApiService {
   getReportCustomers(): Observable<{ displayId: string; name: string }[]> {
     return this.http.get<{ displayId: string; name: string }[]>(`${this.base}/staff/reports/customers`);
   }
+  getSpendingSummary(params: ReportParams): Observable<SpendingSummary> {
+    let p = new HttpParams();
+    if (params.preset)     p = p.set('preset',     params.preset);
+    if (params.from)       p = p.set('from',       params.from);
+    if (params.to)         p = p.set('to',         params.to);
+    if (params.customerId) p = p.set('customerId', params.customerId);
+    return this.http.get<SpendingSummary>(`${this.base}/staff/reports/spending-summary`, { params: p });
+  }
 
   // Payees
   getPayees(): Observable<ApiPayee[]> {
@@ -339,4 +347,19 @@ export interface DeptRowApi {
 export interface ReportDeptPage {
   departments: DeptRowApi[];
   dateRange:   { from: string; to: string };
+}
+
+export interface SpendingCategoryRow {
+  category: string;
+  credits:  number;
+  debits:   number;
+  total:    number;
+  count:    number;
+}
+
+export interface SpendingSummary {
+  categories: SpendingCategoryRow[];
+  totals:     { credits: number; debits: number; net: number; txCount: number };
+  customer:   { displayId: string; name: string } | null;
+  dateRange:  { from: string; to: string };
 }

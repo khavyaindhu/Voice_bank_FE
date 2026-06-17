@@ -43,6 +43,9 @@
     <button [class.active]="activeSection() === 'departments'"   (click)="switchSection('departments')">
       <span class="material-icons">account_tree</span> By Category
     </button>
+    <button [class.active]="activeSection() === 'spending'"      (click)="switchSection('spending')">
+      <span class="material-icons">donut_large</span> Spending Summary
+    </button>
     <button [class.active]="activeSection() === 'exports'"       (click)="switchSection('exports')">
       <span class="material-icons">file_download</span> Export Reports
     </button>
@@ -301,6 +304,126 @@
         <p>No data for selected range.</p>
       </div>
     </div>
+  </ng-container>
+
+  <!-- ══ SPENDING SUMMARY ══════════════════════════════════════════════ -->
+  <ng-container *ngIf="activeSection() === 'spending'">
+
+    <!-- Customer filter -->
+    <div class="tx-filters">
+      <div class="filter-group">
+        <label>Customer</label>
+        <select [ngModel]="spendCustFilter()" (ngModelChange)="spendCustFilter.set($event); loadSpending()">
+          <option value="all">All Customers</option>
+          <option *ngFor="let c of customers()" [value]="c.displayId">{{ c.name }}</option>
+        </select>
+      </div>
+      <div class="tx-count" *ngIf="spendCustName()">
+        Showing activity for <strong>{{ spendCustName() }}</strong>
+      </div>
+    </div>
+
+    <div *ngIf="spendLoading()" class="loading-row">
+      <span class="material-icons spin">sync</span> Loading spending summary…
+    </div>
+
+    <ng-container *ngIf="!spendLoading()">
+
+      <!-- KPI cards -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-icon credits"><span class="material-icons">trending_up</span></div>
+          <div>
+            <div class="kpi-value">{{ fmtK(spendTotals().credits) }}</div>
+            <div class="kpi-label">Money In (Credits)</div>
+            <div class="kpi-sub">{{ dateRangeLabel() }}</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon debits"><span class="material-icons">trending_down</span></div>
+          <div>
+            <div class="kpi-value">{{ fmtK(spendTotals().debits) }}</div>
+            <div class="kpi-label">Money Out (Debits)</div>
+            <div class="kpi-sub">{{ dateRangeLabel() }}</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon net"><span class="material-icons">account_balance_wallet</span></div>
+          <div>
+            <div class="kpi-value">{{ fmtK(spendTotals().net) }}</div>
+            <div class="kpi-label">Net Position</div>
+            <div class="kpi-sub">Credits − Debits</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon tx"><span class="material-icons">receipt_long</span></div>
+          <div>
+            <div class="kpi-value">{{ spendTotals().txCount.toLocaleString() }}</div>
+            <div class="kpi-label">Transactions</div>
+            <div class="kpi-sub">{{ dateRangeLabel() }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="spend-charts" *ngIf="spendCategories().length; else noSpendData">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Activity by Category</h3>
+            <span class="chart-period">{{ dateRangeLabel() }}</span>
+          </div>
+          <div class="canvas-wrap donut">
+            <canvas #donutCanvas></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Credits vs Debits by Category</h3>
+            <span class="chart-period">{{ dateRangeLabel() }}</span>
+          </div>
+          <div class="canvas-wrap bars">
+            <canvas #barCanvas></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category breakdown table -->
+      <div class="table-card" *ngIf="spendCategories().length">
+        <div class="table-title">Category Breakdown</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th class="right">Credits</th>
+              <th class="right">Debits</th>
+              <th class="right">Total Activity</th>
+              <th class="right">Transactions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of spendCategories()">
+              <td>
+                <span class="cat-dot" [style.background]="deptColor(c.category)"></span>
+                {{ deptLabel(c.category) }}
+              </td>
+              <td class="right credit-val">{{ fmt(c.credits) }}</td>
+              <td class="right debit-val">{{ fmt(c.debits) }}</td>
+              <td class="right"><strong>{{ fmt(c.total) }}</strong></td>
+              <td class="right">{{ c.count }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noSpendData>
+        <div class="empty-row" style="padding: 48px; text-align:center; color:#9CA3AF">
+          <span class="material-icons" style="font-size:40px; display:block; margin-bottom:8px">donut_large</span>
+          <p>No activity for this customer/range.</p>
+        </div>
+      </ng-template>
+
+    </ng-container>
   </ng-container>
 
   <!-- ══ EXPORT REPORTS ════════════════════════════════════════════════ -->

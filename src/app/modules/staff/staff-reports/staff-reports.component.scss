@@ -200,6 +200,21 @@
   .dept-bar-legend { font-size: 11px; color: #9CA3AF; }
 }
 
+// Spending Summary
+.spend-charts {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;
+  .chart-card { margin-bottom: 0; }
+  .canvas-wrap { position: relative;
+    &.donut { height: 300px; }
+    &.bars  { height: 300px; }
+  }
+}
+@media (max-width: 900px) {
+  .spend-charts { grid-template-columns: 1fr; }
+}
+.cat-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+           margin-right: 8px; vertical-align: middle; }
+
 // Exports
 .exports-list { display: flex; flex-direction: column; gap: 10px; }
 

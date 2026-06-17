@@ -1,16 +1,20 @@
-import { Component, signal, OnInit, inject, effect } from '@angular/core';
+import { Component, signal, OnInit, OnDestroy, inject, effect, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Chart, registerables } from 'chart.js';
 import {
   ApiService,
   MonthSummaryApi,
   TopCustomerApi,
   LedgerEntryApi,
   DeptRowApi,
+  SpendingCategoryRow,
 } from '../../../core/services/api.service';
 import { StaffContextService } from '../../../core/services/staff-context.service';
 
-type SectionTab = 'overview' | 'transactions' | 'departments' | 'exports';
+Chart.register(...registerables);
+
+type SectionTab = 'overview' | 'transactions' | 'departments' | 'spending' | 'exports';
 type Preset = 'currentmonth' | 'lastmonth' | 'lastweek' | 'last3months' | 'ytd' | 'custom';
 
 const DEPT_LABELS: Record<string, { name: string; color: string }> = {
@@ -44,9 +48,14 @@ interface ReportExport {
   templateUrl: './staff-reports.component.html',
   styleUrl: './staff-reports.component.scss',
 })
-export class StaffReportsComponent implements OnInit {
+export class StaffReportsComponent implements OnInit, OnDestroy {
   private api      = inject(ApiService);
   private staffCtx = inject(StaffContextService);
+
+  @ViewChild('donutCanvas') donutCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('barCanvas')   barCanvas?:   ElementRef<HTMLCanvasElement>;
+  private donutChart?: Chart;
+  private barChart?:   Chart;
 
   // ── UI state ──────────────────────────────────────────────────────
   activeSection = signal<SectionTab>('overview');
@@ -77,6 +86,13 @@ export class StaffReportsComponent implements OnInit {
 
   // Departments
   deptRows = signal<DeptRowApi[]>([]);
+
+  // Spending Summary
+  spendLoading    = signal(false);
+  spendCategories = signal<SpendingCategoryRow[]>([]);
+  spendTotals     = signal({ credits: 0, debits: 0, net: 0, txCount: 0 });
+  spendCustFilter = signal('all');
+  spendCustName   = signal('');
 
   // ── Preset options ────────────────────────────────────────────────
   readonly presets: { key: Preset; label: string }[] = [
@@ -112,11 +128,11 @@ export class StaffReportsComponent implements OnInit {
       const section = (this.staffCtx.reportSection() || 'overview') as SectionTab;
       this.activeSection.set(section);
 
-      // Apply customer filter for transactions
+      // Apply customer filter for transactions / spending
       // Match by name OR by customer ID (with normalisation so speech-spelled
       // IDs like "c u s t 003" collapse to "cust003" matching "CUST-003").
       const customerName = this.staffCtx.reportCustomer();
-      if (customerName && section === 'transactions') {
+      if (customerName && (section === 'transactions' || section === 'spending')) {
         const norm = (s: string) => s.replace(/[\s\-_]/g, '').toLowerCase();
         const qn   = norm(customerName);
         const match = this.customers().find(c =>
@@ -124,14 +140,20 @@ export class StaffReportsComponent implements OnInit {
           norm(c.displayId).includes(qn) ||
           qn.includes(norm(c.displayId))
         );
-        this.txCustFilter.set(match ? match.displayId : 'all');
-        this.txPage.set(1);
+        const matchedId = match ? match.displayId : 'all';
+        if (section === 'transactions') {
+          this.txCustFilter.set(matchedId);
+          this.txPage.set(1);
+        } else {
+          this.spendCustFilter.set(matchedId);
+        }
       }
 
       // Load data
       this.loadSummary();
       if (section === 'transactions') this.loadTransactions();
       if (section === 'departments')  this.loadDepartments();
+      if (section === 'spending')     this.loadSpending();
 
       this.staffCtx.setReport('', '', ''); // clear after consuming
     }, { allowSignalWrites: true });
@@ -197,17 +219,99 @@ export class StaffReportsComponent implements OnInit {
     });
   }
 
+  loadSpending(): void {
+    this.spendLoading.set(true);
+    const params = {
+      ...this.buildParams(),
+      customerId: this.spendCustFilter() !== 'all' ? this.spendCustFilter() : undefined,
+    };
+    this.api.getSpendingSummary(params).subscribe({
+      next: data => {
+        this.spendCategories.set(data.categories);
+        this.spendTotals.set(data.totals);
+        this.spendCustName.set(data.customer?.name ?? '');
+        this.spendLoading.set(false);
+        // Wait a tick so the *ngIf canvases exist in the DOM before drawing
+        setTimeout(() => this.renderSpendCharts(), 0);
+      },
+      error: () => this.spendLoading.set(false),
+    });
+  }
+
+  private renderSpendCharts(): void {
+    const cats   = this.spendCategories();
+    const labels = cats.map(c => this.deptLabel(c.category));
+
+    if (this.donutCanvas) {
+      this.donutChart?.destroy();
+      this.donutChart = new Chart(this.donutCanvas.nativeElement, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: cats.map(c => c.total),
+            backgroundColor: cats.map(c => this.deptColor(c.category)),
+            borderColor: '#ffffff',
+            borderWidth: 2,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '58%',
+          plugins: {
+            legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: { callbacks: { label: ctx => `${ctx.label}: ${this.fmt(ctx.parsed)}` } },
+          },
+        },
+      });
+    }
+
+    if (this.barCanvas) {
+      this.barChart?.destroy();
+      this.barChart = new Chart(this.barCanvas.nativeElement, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Credits', data: cats.map(c => c.credits), backgroundColor: '#34D399', borderRadius: 4 },
+            { label: 'Debits',  data: cats.map(c => c.debits),  backgroundColor: '#F87171', borderRadius: 4 },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${this.fmt(Number(ctx.parsed.y))}` } },
+          },
+          scales: {
+            x: { ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 0 } },
+            y: { ticks: { callback: v => this.fmtK(Number(v)) } },
+          },
+        },
+      });
+    }
+  }
+
   applyFilter(): void {
     this.loadSummary();
     const section = this.activeSection();
     if (section === 'transactions') this.loadTransactions();
     if (section === 'departments')  this.loadDepartments();
+    if (section === 'spending')     this.loadSpending();
   }
 
   switchSection(s: SectionTab): void {
     this.activeSection.set(s);
-    if (s === 'transactions' && this.txEntries().length === 0) this.loadTransactions();
-    if (s === 'departments'  && this.deptRows().length === 0)  this.loadDepartments();
+    if (s === 'transactions' && this.txEntries().length === 0)    this.loadTransactions();
+    if (s === 'departments'  && this.deptRows().length === 0)     this.loadDepartments();
+    if (s === 'spending'     && this.spendCategories().length === 0) this.loadSpending();
+  }
+
+  ngOnDestroy(): void {
+    this.donutChart?.destroy();
+    this.barChart?.destroy();
   }
 
   txPageChange(p: number): void {

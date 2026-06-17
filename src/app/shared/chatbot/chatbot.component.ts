@@ -542,7 +542,9 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     // Patterns: "show current month summary", "show last month summary",
     //           "show transactions for Vijaya current month", "show last week transactions",
     //           "show last 3 months summary", "show YTD report"
+    const isSpendingCmd = /spend|spending/i.test(lower);
     const isReportCmd =
+      isSpendingCmd ||
       /(?:summary|report|overview)/i.test(lower) ||
       /transactions?\s+for\s+/i.test(lower) ||
       // "[name] transactions [period]" e.g. "show Ramesh transactions last month"
@@ -559,26 +561,36 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       else if (/last\s*3\s*months?|last\s*three\s*months?/i.test(lower)) reportPreset = 'last3months';
       else if (/ytd|year\s*to\s*date|this\s*year/i.test(lower))          reportPreset = 'ytd';
 
-      // Detect customer — two patterns:
+      // Detect customer — patterns:
       // 1. "transactions for [name/id]..."   2. "show [name/id] transactions..."
+      // 3. "spending summary of/for [name]..." 4. "[name] spending..."
       // Allow digits so speech-spelled IDs like "c u s t 003" are captured fully.
       const custForMatch =
         lower.match(/transactions?\s+for\s+([a-z][a-z0-9 ]{1,30}?)(?:\s+(?:current|last|this|ytd|year|month|week|summary)|$)/i) ??
-        lower.match(/show\s+([a-z][a-z0-9 ]{2,30}?)\s+transactions?/i);
+        lower.match(/show\s+([a-z][a-z0-9 ]{2,30}?)\s+transactions?/i) ??
+        lower.match(/(?:spending|spend)\s+summary\s+(?:of|for)\s+([a-z][a-z0-9 ]{1,30}?)(?:\s+(?:current|last|this|ytd|year|month|week)|$)/i) ??
+        lower.match(/(?:summary\s+(?:of|for))\s+([a-z][a-z0-9 ]{1,30}?)(?:'s)?(?:\s+(?:spending|spend|current|last|this|ytd|year|month|week)|$)/i) ??
+        lower.match(/([a-z][a-z0-9 ]{1,30}?)(?:'s)?\s+(?:spending|spend)\b/i);
       const reportCustomer = custForMatch?.[1]?.trim() ?? '';
 
       // Detect section
-      const reportSection = /transaction/i.test(lower) ? 'transactions' : 'overview';
+      const reportSection = isSpendingCmd
+        ? 'spending'
+        : (/transaction/i.test(lower) ? 'transactions' : 'overview');
 
       const presetLabel: Record<string, string> = {
         currentmonth: 'current month', lastmonth: 'last month',
         lastweek: 'last 7 days', last3months: 'last 3 months', ytd: 'year to date',
       };
 
+      const sectionLabel =
+        reportSection === 'transactions' ? 'transaction detail' :
+        reportSection === 'spending'     ? 'spending summary'    : 'summary';
+
       this.addAssistantMessage(
         `📈 Opening **Reports** — ${presetLabel[reportPreset]}` +
         (reportCustomer ? ` for **${reportCustomer}**` : '') +
-        `...\n\nLoading ${reportSection === 'transactions' ? 'transaction detail' : 'summary'} now.`
+        `...\n\nLoading ${sectionLabel} now.`
       );
       // Use goto: if already on reports page, set signal directly;
       // otherwise navigate first so the component mounts before the signal is set
@@ -1139,14 +1151,46 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       agni:   ['ಅಗ್ನಿ', 'अग्नि', 'அக்னி', 'agni'],
     };
 
+    const detectCustomer = (): string => {
+      for (const [name, variants] of Object.entries(nativeCustomerNames)) {
+        if (hasAny(variants)) return name;
+      }
+      return '';
+    };
+
+    const detectPeriod = (): string => {
+      for (const [command, termsByLanguage] of Object.entries(termsByCommand)) {
+        const pm = command.match(/^open transactions report for (.+)$/);
+        if (!pm) continue;
+        const terms = termsByLanguage[langCode];
+        if (terms && hasAny(terms)) return pm[1];
+      }
+      return '';
+    };
+
+    // Spending summary (native scripts) — checked first so the spending keyword
+    // wins over a bare period/report match. Builds "spending summary [for NAME] [PERIOD]"
+    // which handleStaffIntent routes to the Spending Summary tab.
+    const spendingTerms: Record<string, string[]> = {
+      hi: ['खर्च', 'व्यय', 'स्पेंडिंग'],
+      ta: ['செலவு', 'செலவின', 'ஸ்பெண்டிங்'],
+      kn: ['ವೆಚ್ಚ', 'ಖರ್ಚು', 'ಸ್ಪೆಂಡಿಂಗ್'],
+      es: ['gasto', 'gastos'],
+    };
+    const spendTerms = spendingTerms[langCode];
+    if (spendTerms && hasAny(spendTerms)) {
+      const who = detectCustomer();
+      const period = detectPeriod();
+      return `spending summary${who ? ' for ' + who : ''}${period ? ' ' + period : ''}`.trim();
+    }
+
     for (const [command, termsByLanguage] of Object.entries(termsByCommand)) {
       const terms = termsByLanguage[langCode];
       if (terms && hasAny(terms)) {
         const periodMatch = command.match(/^open transactions report for (.+)$/);
         if (periodMatch) {
-          for (const [name, variants] of Object.entries(nativeCustomerNames)) {
-            if (hasAny(variants)) return `show transactions for ${name} ${periodMatch[1]}`;
-          }
+          const who = detectCustomer();
+          if (who) return `show transactions for ${who} ${periodMatch[1]}`;
         }
         return command;
       }
