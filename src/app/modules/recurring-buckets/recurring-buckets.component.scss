@@ -9,11 +9,13 @@
   }
 }
 
-.loading-state, .empty-state {
+.empty-state {
   padding: 48px;
   text-align: center;
   color: var(--usb-gray-600);
   .material-icons { font-size: 40px; color: var(--usb-gray-400); display: block; margin-bottom: 8px; }
+  .empty-error { color: #B91C1C; font-weight: 600; margin-bottom: 8px; }
+  .empty-hint { font-size: 13px; color: var(--usb-gray-600); max-width: 420px; margin: 0 auto; line-height: 1.45; }
 }
 
 .bucket-list {

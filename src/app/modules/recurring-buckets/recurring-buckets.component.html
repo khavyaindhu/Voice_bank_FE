@@ -8,7 +8,15 @@
 } @else if (bucketSvc.buckets().length === 0) {
   <div class="empty-state card">
     <span class="material-icons">event_repeat</span>
-    <p>No recurring buckets yet. Run the backend seed script to load demo Bucket A.</p>
+    @if (bucketSvc.loadError()) {
+      <p class="empty-error">{{ bucketSvc.loadError() }}</p>
+    } @else {
+      <p>No recurring buckets for your account.</p>
+      <p class="empty-hint">
+        If you just ran the database seed, <strong>log out and log in again</strong>
+        (johndoe / Demo@1234) so your session matches the new demo user.
+      </p>
+    }
   </div>
 } @else {
   <div class="layout">

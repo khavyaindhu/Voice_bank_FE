@@ -47,6 +47,12 @@ export class PayeeService {
     await this.load();
   }
 
+  clearCache(): void {
+    this._payees.set([]);
+    this._loaded.set(false);
+    this._loading.set(false);
+  }
+
   /** Wait until payees are loaded (for Maya voice Quick Pay). */
   async ensureLoaded(): Promise<void> {
     if (this._loaded()) return;

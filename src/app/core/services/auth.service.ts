@@ -1,8 +1,10 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { RecurringBucketService } from './recurring-bucket.service';
+import { PayeeService } from './payee.service';
 
 export interface User {
   id: string;
@@ -18,7 +20,12 @@ export class AuthService {
 
   currentUser = signal<User | null>(this.loadUser());
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    private recurringBuckets: RecurringBucketService,
+    private payeeSvc: PayeeService,
+  ) {}
 
   login(username: string, password: string) {
     return this.http.post<{ token: string; user: User }>(`${environment.apiUrl}/auth/login`, { username, password }).pipe(
@@ -34,6 +41,8 @@ export class AuthService {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
     this.currentUser.set(null);
+    this.recurringBuckets.clearCache();
+    this.payeeSvc.clearCache();
     this.router.navigate(['/login']);
   }
 

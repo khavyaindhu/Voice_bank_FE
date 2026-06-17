@@ -15,17 +15,35 @@ export class RecurringBucketService {
   private _buckets = signal<RecurringBucket[]>([]);
   private _loading = signal(false);
   private _loaded = signal(false);
+  private _loadError = signal<string | null>(null);
 
   readonly buckets = this._buckets.asReadonly();
   readonly loading = this._loading.asReadonly();
+  readonly loadError = this._loadError.asReadonly();
+
+  /** Drop cached list — call on logout or after DB re-seed + new login. */
+  clearCache(): void {
+    this._buckets.set([]);
+    this._loaded.set(false);
+    this._loadError.set(null);
+  }
 
   async load(): Promise<void> {
     if (this._loaded() && !this._loading()) return;
     this._loading.set(true);
+    this._loadError.set(null);
     try {
       const list = await lastValueFrom(this.api.getRecurringBuckets());
       this._buckets.set(list);
       this._loaded.set(true);
+    } catch (err: unknown) {
+      this._loadError.set(
+        (err as { error?: { message?: string }; status?: number })?.error?.message ??
+        (err as { status?: number })?.status === 404
+          ? 'Recurring buckets API not found — deploy the latest backend.'
+          : 'Could not load recurring buckets. Try logging out and back in.',
+      );
+      this._loaded.set(false);
     } finally {
       this._loading.set(false);
     }

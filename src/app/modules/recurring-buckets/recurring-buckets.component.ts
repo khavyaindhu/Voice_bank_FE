@@ -42,11 +42,25 @@ export class RecurringBucketsComponent implements OnInit {
   ];
 
   constructor() {
+    // When buckets load (or Maya sets a nickname), auto-open the detail panel.
     effect(() => {
+      const buckets = this.bucketSvc.buckets();
+      if (buckets.length === 0) return;
+
       const nick = this.bucketCtx.viewBucketNickname();
-      if (!nick) return;
-      const bucket = this.bucketSvc.findByNickname(nick);
-      if (bucket) this.selectedId.set(bucket.id);
+      if (nick) {
+        const bucket = this.bucketSvc.findByNickname(nick);
+        if (bucket) {
+          this.selectedId.set(bucket.id);
+          this.bucketCtx.viewBucketNickname.set('');
+        }
+        return;
+      }
+
+      const current = this.selectedId();
+      if (!current || !buckets.some(b => b.id === current)) {
+        this.selectDefaultBucket(buckets);
+      }
     });
 
     effect(() => {
@@ -64,7 +78,16 @@ export class RecurringBucketsComponent implements OnInit {
   ngOnInit(): void {
     this.api.getAccounts().subscribe({ next: a => this.accounts.set(a), error: () => {} });
     this.payeeSvc.load();
-    this.bucketSvc.load();
+    this.bucketSvc.reload();
+  }
+
+  /** Prefer Bucket A when present; otherwise first bucket. */
+  private selectDefaultBucket(buckets: RecurringBucket[]): void {
+    const preferred =
+      buckets.find(b => b.nickname.toLowerCase() === 'a') ??
+      buckets.find(b => b.name.toLowerCase().includes('bucket a')) ??
+      buckets[0];
+    if (preferred) this.selectedId.set(preferred.id);
   }
 
   get selected(): RecurringBucket | undefined {
