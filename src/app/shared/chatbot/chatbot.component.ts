@@ -1189,6 +1189,20 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       return `spending summary${who ? ' for ' + who : ''}${period ? ' ' + period : ''}`.trim();
     }
 
+    // Customer portal: navigate to payment history (not staff reports).
+    if (this.role === 'customer') {
+      const customerTxnTerms: Record<string, string[]> = {
+        hi: ['लेनदेन', 'लेन-देन', 'ट्रांजैक्शन', 'भुगतान इतिहास', 'लेनदेन इतिहास'],
+        ta: ['பரிவர்த்தனை', 'பரிவர்த்தனைகள்', 'பரிவர்த்தனை வரலாறு', 'பரிவர்த்தனைகள் பக்கம்'],
+        kn: ['ವಹಿವಾಟು', 'ವಹಿವಾಟುಗಳು', 'ವಹಿವಾಟು ಇತಿಹಾಸ', 'ವಹಿವಾಟುಗಳು ಪುಟ'],
+        es: ['transacciones', 'historial de transacciones', 'historial de pagos', 'mis transacciones'],
+      };
+      const txnTerms = customerTxnTerms[langCode];
+      if (txnTerms && hasAny(txnTerms)) {
+        return 'go to transaction history';
+      }
+    }
+
     for (const [command, termsByLanguage] of Object.entries(termsByCommand)) {
       const terms = termsByLanguage[langCode];
       if (terms && hasAny(terms)) {

@@ -14,7 +14,13 @@ const CUSTOMER_NAV_INTENTS: { patterns: RegExp[]; route: string; label: string }
   { patterns: [/\bach\b|ach\s*transfer/i], route: '/payments/ach', label: 'ACH Transfer' },
   { patterns: [/zelle/i], route: '/payments/zelle', label: 'Zelle' },
   { patterns: [/card\s*pay/i], route: '/payments/card', label: 'Card Payment' },
-  { patterns: [/history|past\s*trans|transaction\s*history/i], route: '/payments/history', label: 'Payment History' },
+  {
+    patterns: [
+      /transactions?|transaction\s*history|payment\s*history|past\s*trans|view\s*(?:all\s*)?transactions?|my\s*transactions?/i,
+    ],
+    route: '/payments/history',
+    label: 'Transaction History',
+  },
   { patterns: [/dashboard|go\s*home|home\s*page/i], route: '/dashboard', label: 'Dashboard' },
   { patterns: [/accounts?|my\s*account|go.*account/i], route: '/accounts', label: 'Accounts' },
   { patterns: [/quick\s*pay|payees?|saved.*pay|my\s*payees?|go.*payee/i], route: '/payees', label: 'Quick Pay' },
@@ -38,7 +44,7 @@ function normalizeNavMessage(message: string): string {
   return message
     .toLowerCase()
     .replace(/[^\w\s&/-]/g, ' ')
-    .replace(/\b(?:please|kindly|just|the|a|an|tab|screen|page|section|menu|module)\b/g, ' ')
+    .replace(/\b(?:please|kindly|just|the|a|an|tab|screen|page|step|section|menu|module)\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -160,8 +166,11 @@ const INTENTS: { patterns: RegExp[]; response: (ctx: string, accounts?: Account[
       `**To Freeze/Unfreeze Card:**\n\n1. Go to **Cards** page\n2. Click the **Freeze/Unfreeze** toggle\n\n🔒 Frozen cards can't be used.\n✅ Unfreeze anytime instantly.\n📞 Lost/stolen: **1-800-285-8585**`,
   },
   {
-    patterns: [/transaction|payment\s*history|transfer\s*history/i],
-    response: () => `Your **Transaction History** is under **Payments → History**.\nFilter by type (ACH/Wire/Zelle), date range, and status.`,
+    patterns: [/transaction\s*history|payment\s*history|transfer\s*history|where.*transactions?|list\s*(?:my\s*)?transactions?/i],
+    response: () =>
+      `Your **Transaction History** is on the **Transactions** page in the sidebar.\n` +
+      `Filter by type (ACH/Wire/Zelle), date range, and status.\n\n` +
+      `Say *"Go to Transactions"* and I'll take you there!`,
   },
   {
     patterns: [/quick\s*pay|saved\s*pay|my\s*payees?|send.*to\s+\w|pay.*\w+\s+\$\d/i],
