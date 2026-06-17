@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { marked } from 'marked';
-import { ApiService, Account, RecurringBucket, RecurringItem } from '../../core/services/api.service';
+import { ApiService, Account, CreateRecurringItemPayload, RecurringBucket, RecurringCategory, RecurringItem } from '../../core/services/api.service';
 import { ScreenContextService } from '../../core/services/screen-context.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FormFillService } from '../../core/services/form-fill.service';
@@ -528,6 +528,63 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       return m ? m[1] : null;
     };
 
+    // Add new recurring bill / subscription / EMI (e.g. "add mobile phone EMI of Rs 1000")
+    const parsedAdd = this.parseAddRecurringPhrase(lower);
+    if (parsedAdd) {
+      await this.payeeSvc.ensureLoaded();
+      const nick = parsedAdd.bucketNick ?? extractBucketNick() ?? 'a';
+      const bucket = this.recurringBucketSvc.findByNickname(nick);
+      if (!bucket) {
+        this.addAssistantMessage(`I couldn't find bucket **${nick}**. Try *"add … to bucket A"*.`);
+        return true;
+      }
+
+      if (parsedAdd.amount > 0 && parsedAdd.name) {
+        try {
+          const payee = this.payeeSvc.findByName(parsedAdd.name);
+          const payload: CreateRecurringItemPayload = {
+            name: parsedAdd.name,
+            category: parsedAdd.category,
+            amount: parsedAdd.amount,
+            dayOfMonth: 1,
+            aliases: [parsedAdd.name.toLowerCase()],
+            payeeId: payee?.id,
+          };
+          const updated = await this.recurringBucketSvc.addItem(bucket.id, payload);
+          const item = updated.items.find(i =>
+            i.name.toLowerCase() === parsedAdd.name.toLowerCase()
+          );
+          this.recurringBucketCtx.openBucket(bucket.nickname);
+          if (item) this.recurringBucketCtx.flashItem(item.id);
+          this.router.navigate(['/recurring-buckets']);
+          this.addAssistantMessage(
+            `Added **${parsedAdd.name}** to Bucket ${bucket.nickname} — ` +
+            `${this.formatCurrency(parsedAdd.amount)}/month (${parsedAdd.category}). ✅`
+          );
+        } catch (err: unknown) {
+          const message = (err as { error?: { message?: string } })?.error?.message ?? 'Could not add that bill.';
+          this.addAssistantMessage(`Sorry — ${message}`);
+        }
+        return true;
+      }
+
+      this.recurringBucketCtx.requestAddItem(bucket.nickname, {
+        name: parsedAdd.name,
+        category: parsedAdd.category,
+        amount: parsedAdd.amount || 0,
+        dayOfMonth: 1,
+      });
+      this.recurringBucketCtx.openBucket(bucket.nickname);
+      this.router.navigate(['/recurring-buckets']);
+      this.addAssistantMessage(
+        `Opening **Add bill** for Bucket ${bucket.nickname}. ` +
+        (parsedAdd.name ? `Pre-filled **${parsedAdd.name}**` : 'Fill in the details') +
+        (parsedAdd.amount > 0 ? ` at ${this.formatCurrency(parsedAdd.amount)}` : '') +
+        ' — tap **Save** to confirm.'
+      );
+      return true;
+    }
+
     // Pay all in bucket A
     if (
       /pay\s+all|make\s+all|process\s+all|send\s+all/i.test(lower) &&
@@ -627,6 +684,73 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     return false;
+  }
+
+  /** Parse "add mobile phone EMI of Rs 1000" / "add Netflix subscription $15.99". */
+  private parseAddRecurringPhrase(lower: string): {
+    name: string;
+    amount: number;
+    category: RecurringCategory;
+    bucketNick: string | null;
+  } | null {
+    if (/add\s+(?:a\s+)?payee/i.test(lower) && !/bucket|recurring/i.test(lower)) return null;
+
+    const addPrefix = lower.match(
+      /^(?:can\s+you\s+|could\s+you\s+|please\s+|maya\s+)?(?:add|create|register|set\s+up)(?:\s+a)?(?:\s+new)?\s+/i,
+    );
+    if (!addPrefix) return null;
+
+    const recurringCue =
+      /emi|subscription|recurring|bucket|monthly\s+bill|rent|utility|maintenance|netflix|hotstar|spotify|prime/i;
+    if (!recurringCue.test(lower)) return null;
+
+    const bucketM = lower.match(/(?:to|in)\s+bucket\s+([a-z0-9]+)/i);
+    const bucketNick = bucketM ? bucketM[1] : null;
+
+    let text = lower.slice(addPrefix[0].length).trim();
+    if (bucketM) text = text.replace(bucketM[0], '').trim();
+
+    let amount = 0;
+    const amountPatterns = [
+      /(?:of|for|at)\s+(?:rs\.?|inr|₹|rupees?)\s*([\d,]+(?:\.\d+)?)/i,
+      /(?:rs\.?|inr|₹|rupees?)\s*([\d,]+(?:\.\d+)?)/i,
+      /(?:of|for|at)\s+\$?\s*([\d,]+(?:\.\d+)?)/i,
+      /\$\s*([\d,]+(?:\.\d+)?)/i,
+    ];
+    for (const pat of amountPatterns) {
+      const m = text.match(pat);
+      if (m) {
+        amount = parseFloat(m[1].replace(/,/g, ''));
+        text = text.replace(m[0], ' ').trim();
+        break;
+      }
+    }
+
+    let category: RecurringCategory = 'other';
+    if (/\bemi\b|car\s+loan|auto\s+loan|phone\s+loan/i.test(text)) category = 'emi';
+    else if (/subscription|netflix|hotstar|spotify|prime|disney/i.test(text)) category = 'subscription';
+    else if (/\brent\b|housing|landlord/i.test(text)) category = 'rent';
+    else if (/electric|utility|water|gas|internet|broadband/i.test(text)) category = 'utility';
+    else if (/maintenance|society/i.test(text)) category = 'maintenance';
+
+    let name = text
+      .replace(/\b(emi|subscription|recurring|payment|bill)\b/gi, ' ')
+      .replace(/\b(monthly|per\s+month)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!name) {
+      if (category === 'subscription') name = 'New Subscription';
+      else if (category === 'emi') name = 'New EMI';
+      else return null;
+    }
+
+    name = name
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+
+    return { name, amount, category, bucketNick };
   }
 
   // ── Staff Intent Detection ───────────────────────────────────────────────

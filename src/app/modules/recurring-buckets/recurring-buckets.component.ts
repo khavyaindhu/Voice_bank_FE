@@ -65,7 +65,19 @@ export class RecurringBucketsComponent implements OnInit {
       }
       this.bucketCtx.payAllReviewNickname.set('');
     });
+
+    effect(() => {
+      const req = this.bucketCtx.addItemRequest();
+      if (!req) return;
+      const bucket = this.bucketSvc.findByNickname(req.nickname);
+      if (bucket) {
+        this.selectedId.set(bucket.id);
+        this.openAddItemForm(req.draft);
+      }
+      this.bucketCtx.addItemRequest.set(null);
+    });
   }
+
 
   ngOnInit(): void {
     this.api.getAccounts().subscribe({ next: a => this.accounts.set(a), error: () => {} });
@@ -180,7 +192,11 @@ export class RecurringBucketsComponent implements OnInit {
   }
 
   startAddItem(): void {
-    this.itemForm = this.emptyItemForm();
+    this.openAddItemForm();
+  }
+
+  openAddItemForm(draft?: Partial<CreateRecurringItemPayload>): void {
+    this.itemForm = { ...this.emptyItemForm(), ...draft };
     this.editItemId.set(null);
     this.showAddItem.set(true);
   }

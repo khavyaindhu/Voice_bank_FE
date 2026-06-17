@@ -295,7 +295,12 @@ export class LocalChatService {
     }
 
     // 3. Knowledge base intents
+    const isAddRecurring =
+      /(?:add|create|register|set\s+up)/i.test(lower) &&
+      /emi|subscription|recurring|bucket|monthly\s+bill/i.test(lower);
+
     for (const intent of INTENTS) {
+      if (isAddRecurring && intent.patterns.some(p => /\bemi\b|my\s*loan/i.test(p.source))) continue;
       if (intent.patterns.some(p => p.test(lower))) {
         return { text: intent.response(screen, accounts) };
       }
