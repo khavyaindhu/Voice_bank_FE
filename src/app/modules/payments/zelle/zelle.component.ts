@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ApiService, Account } from '../../../core/services/api.service';
 import { ScreenContextService } from '../../../core/services/screen-context.service';
@@ -9,7 +10,7 @@ import { FormFillService } from '../../../core/services/form-fill.service';
 @Component({
   selector: 'app-zelle',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './zelle.component.html',
   styleUrl: '../payments-shared.scss',
 })

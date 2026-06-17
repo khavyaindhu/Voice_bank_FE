@@ -86,9 +86,18 @@
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   margin-bottom: 16px;
   .material-icons { font-size: 18px; color: var(--usb-green); }
+  .success-history-link {
+    margin-left: auto;
+    font-weight: 600;
+    color: var(--usb-navy);
+    text-decoration: none;
+    white-space: nowrap;
+    &:hover { text-decoration: underline; }
+  }
 }
 
 .alert-error {

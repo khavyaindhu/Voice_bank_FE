@@ -1,6 +1,7 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { Component, signal, OnInit } from '@angular/core';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { filter } from 'rxjs/operators';
 import { AuthService } from '../core/services/auth.service';
 import { ChatbotComponent } from '../shared/chatbot/chatbot.component';
 
@@ -20,7 +21,7 @@ interface NavItem {
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })
-export class LayoutComponent {
+export class LayoutComponent implements OnInit {
   sidebarOpen      = signal(true);
   paymentsExpanded = signal(false);
   role             = signal<AppRole>('customer');
@@ -35,9 +36,9 @@ export class LayoutComponent {
         { label: 'Wire Transfer', route: '/payments/wire' },
         { label: 'Zelle',         route: '/payments/zelle' },
         { label: 'Card Payment',  route: '/payments/card' },
-        { label: 'History',       route: '/payments/history' },
       ],
     },
+    { label: 'Transactions', icon: 'receipt_long', route: '/payments/history' },
     { label: 'Quick Pay', icon: 'contacts',     route: '/payees' },
     { label: 'Cards',     icon: 'credit_card',  route: '/cards' },
     { label: 'Loans',     icon: 'home',         route: '/loans' },
@@ -56,6 +57,19 @@ export class LayoutComponent {
   }
 
   constructor(public auth: AuthService, private router: Router) {}
+
+  ngOnInit(): void {
+    // Keep Payments submenu open while user is on any payment form page
+    this.syncPaymentsExpanded(this.router.url);
+    this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(e => {
+      this.syncPaymentsExpanded((e as NavigationEnd).urlAfterRedirects);
+    });
+  }
+
+  private syncPaymentsExpanded(url: string): void {
+    const onPaymentForm = /^\/payments\/(ach|wire|zelle|card)(\/|$)/.test(url);
+    if (onPaymentForm) this.paymentsExpanded.set(true);
+  }
 
   toggleSidebar(): void  { this.sidebarOpen.update(v => !v); }
   togglePayments(): void { this.paymentsExpanded.update(v => !v); }

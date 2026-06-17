@@ -8,7 +8,7 @@
   Zelle payments are <strong>instant and final</strong>. Only send money to people you know and trust.
 </div>
 
-@if (success()) { <div class="alert-success"><span class="material-icons">check_circle</span> {{ success() }}</div> }
+@if (success()) { <div class="alert-success"><span class="material-icons">check_circle</span><span>{{ success() }}</span><a routerLink="/payments/history" class="success-history-link">View Transaction History</a></div> }
 @if (error()) { <div class="alert-error"><span class="material-icons">error_outline</span> {{ error() }}</div> }
 
 <div class="form-section">

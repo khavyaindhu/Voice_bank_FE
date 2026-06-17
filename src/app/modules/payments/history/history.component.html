@@ -5,7 +5,7 @@
 
 <div class="filters">
   <label>Filter by Type:</label>
-  <select [(ngModel)]="filterType" (ngModelChange)="onFilterChange()">
+  <select [ngModel]="filterType()" (ngModelChange)="filterType.set($event); onFilterChange()">
     <option value="">All Types</option>
     <option value="ach">ACH Transfer</option>
     <option value="wire">Wire Transfer</option>

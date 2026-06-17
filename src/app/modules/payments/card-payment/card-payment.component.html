@@ -3,7 +3,7 @@
   <p>Pay your U.S. Bank credit card balance — payments post within 1–2 business days.</p>
 </div>
 
-@if (success()) { <div class="alert-success"><span class="material-icons">check_circle</span> {{ success() }}</div> }
+@if (success()) { <div class="alert-success"><span class="material-icons">check_circle</span><span>{{ success() }}</span><a routerLink="/payments/history" class="success-history-link">View Transaction History</a></div> }
 @if (error()) { <div class="alert-error"><span class="material-icons">error_outline</span> {{ error() }}</div> }
 
 <div class="form-section">

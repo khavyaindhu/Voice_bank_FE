@@ -1,13 +1,14 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ApiService, Account, Card } from '../../../core/services/api.service';
 import { ScreenContextService } from '../../../core/services/screen-context.service';
 
 @Component({
   selector: 'app-card-payment',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './card-payment.component.html',
   styleUrl: '../payments-shared.scss',
 })

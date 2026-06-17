@@ -59,6 +59,11 @@ export const routes: Routes = [
         data: { screen: 'payees' },
       },
       {
+        path: 'transactions',
+        redirectTo: 'payments/history',
+        pathMatch: 'full',
+      },
+      {
         path: 'cards',
         loadComponent: () => import('./modules/cards/cards.component').then(m => m.CardsComponent),
         data: { screen: 'cards' },
