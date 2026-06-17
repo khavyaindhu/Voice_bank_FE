@@ -54,9 +54,42 @@ export class HistoryComponent implements OnInit, OnDestroy {
   load(): void {
     this.loading.set(true);
     this.api.getPaymentHistory(this.page(), this.filterType() || undefined).subscribe({
-      next: r => { this.transactions.set(r.transactions); this.total.set(r.total); this.pages.set(r.pages); this.loading.set(false); },
+      next: r => {
+        this.transactions.set(
+          (r.transactions ?? []).map(tx => ({
+            ...tx,
+            amount: this.coerceAmount(tx.amount),
+          }))
+        );
+        this.total.set(r.total);
+        this.pages.set(r.pages);
+        this.loading.set(false);
+      },
       error: () => this.loading.set(false),
     });
+  }
+
+  /** Parse amount from API (number, string, or legacy BSON decimal shapes). */
+  private coerceAmount(value: unknown): number {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const n = parseFloat(value.replace(/[^0.-]/g, ''));
+      return Number.isFinite(n) ? n : 0;
+    }
+    if (value && typeof value === 'object') {
+      const dec = (value as { $numberDecimal?: string }).$numberDecimal;
+      if (dec != null) {
+        const n = parseFloat(dec);
+        return Number.isFinite(n) ? n : 0;
+      }
+    }
+    return 0;
+  }
+
+  formatAmount(value: unknown): string {
+    const n = typeof value === 'number' ? value : this.coerceAmount(value);
+    if (!Number.isFinite(n)) return '—';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
   }
 
   onFilterChange(): void { this.page.set(1); this.load(); }

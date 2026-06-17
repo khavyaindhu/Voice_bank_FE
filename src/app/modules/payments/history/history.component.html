@@ -51,7 +51,7 @@
             <td>{{ tx.recipientName || '—' }}<br><small>{{ tx.memo || '' }}</small></td>
             <td class="ref">{{ tx.referenceNumber }}</td>
             <td>{{ tx.createdAt | date:'MMM d, y' }}</td>
-            <td class="amount">{{ tx.amount | currency }}</td>
+            <td class="tx-amount-cell">{{ formatAmount(tx.amount) }}</td>
             <td><span [class]="'badge-' + (tx.status === 'completed' ? 'success' : 'pending')">{{ tx.status }}</span></td>
           </tr>
         }

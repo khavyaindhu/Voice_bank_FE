@@ -103,7 +103,7 @@
           <div class="tx-meta">{{ tx.type | uppercase }} · {{ tx.createdAt | date:'MMM d, y' }}</div>
         </div>
         <div class="tx-right">
-          <div class="tx-amount">-{{ tx.amount | currency }}</div>
+          <div class="tx-amount">-{{ formatAmount(tx.amount) }}</div>
           <span [class]="'badge-' + (tx.status === 'completed' ? 'success' : 'pending')">{{ tx.status }}</span>
         </div>
       </div>

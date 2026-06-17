@@ -26,7 +26,12 @@
   }
 }
 
-.tx-table-wrap { overflow-x: auto; }
+.tx-table-wrap {
+  overflow-x: auto;
+  /* Keep amount/status columns visible when Maya chatbot is open on the right */
+  margin-bottom: 24px;
+  padding-right: 8px;
+}
 
 .tx-table {
   width: 100%;
@@ -77,7 +82,18 @@
 }
 
 .ref { font-family: monospace; font-size: 11px; color: var(--usb-gray-600); }
-.amount { font-weight: 700; color: var(--usb-red); white-space: nowrap; }
+.tx-amount-cell {
+  font-weight: 700;
+  color: var(--usb-red);
+  white-space: nowrap;
+  min-width: 100px;
+  text-align: right;
+}
+
+.tx-table th:nth-child(5) {
+  text-align: right;
+  min-width: 100px;
+}
 
 .pagination {
   display: flex;
