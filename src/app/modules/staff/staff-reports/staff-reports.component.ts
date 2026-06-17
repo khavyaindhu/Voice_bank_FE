@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, OnDestroy, inject, effect, ViewChild, ElementRef } from '@angular/core';
+import { Component, signal, OnInit, OnDestroy, inject, effect, ViewChild, ElementRef, afterNextRender, Injector } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
@@ -51,6 +51,7 @@ interface ReportExport {
 export class StaffReportsComponent implements OnInit, OnDestroy {
   private api      = inject(ApiService);
   private staffCtx = inject(StaffContextService);
+  private injector = inject(Injector);
 
   @ViewChild('donutCanvas') donutCanvas?: ElementRef<HTMLCanvasElement>;
   @ViewChild('barCanvas')   barCanvas?:   ElementRef<HTMLCanvasElement>;
@@ -231,18 +232,30 @@ export class StaffReportsComponent implements OnInit, OnDestroy {
         this.spendTotals.set(data.totals);
         this.spendCustName.set(data.customer?.name ?? '');
         this.spendLoading.set(false);
-        // Wait a tick so the *ngIf canvases exist in the DOM before drawing
-        setTimeout(() => this.renderSpendCharts(), 0);
+        // Canvases live inside *ngIf — render after Angular paints them into the DOM
+        afterNextRender(() => this.scheduleSpendCharts(), { injector: this.injector });
       },
       error: () => this.spendLoading.set(false),
     });
   }
 
+  private scheduleSpendCharts(): void {
+    // Retry once if *ngIf hasn't mounted the canvases yet (tab switch race)
+    if (!this.donutCanvas?.nativeElement || !this.barCanvas?.nativeElement) {
+      setTimeout(() => this.renderSpendCharts(), 80);
+      return;
+    }
+    this.renderSpendCharts();
+  }
+
   private renderSpendCharts(): void {
     const cats   = this.spendCategories();
+    if (!cats.length) return;
     const labels = cats.map(c => this.deptLabel(c.category));
+    const tickColor = '#374151';
+    const gridColor = '#E5E7EB';
 
-    if (this.donutCanvas) {
+    if (this.donutCanvas?.nativeElement) {
       this.donutChart?.destroy();
       this.donutChart = new Chart(this.donutCanvas.nativeElement, {
         type: 'doughnut',
@@ -260,14 +273,14 @@ export class StaffReportsComponent implements OnInit, OnDestroy {
           maintainAspectRatio: false,
           cutout: '58%',
           plugins: {
-            legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
+            legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 }, color: tickColor } },
             tooltip: { callbacks: { label: ctx => `${ctx.label}: ${this.fmt(ctx.parsed)}` } },
           },
         },
       });
     }
 
-    if (this.barCanvas) {
+    if (this.barCanvas?.nativeElement) {
       this.barChart?.destroy();
       this.barChart = new Chart(this.barCanvas.nativeElement, {
         type: 'bar',
@@ -282,12 +295,12 @@ export class StaffReportsComponent implements OnInit, OnDestroy {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'top' },
+            legend: { position: 'top', labels: { color: tickColor } },
             tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${this.fmt(Number(ctx.parsed.y))}` } },
           },
           scales: {
-            x: { ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 0 } },
-            y: { ticks: { callback: v => this.fmtK(Number(v)) } },
+            x: { ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 0, color: tickColor }, grid: { color: gridColor } },
+            y: { ticks: { color: tickColor, callback: v => this.fmtK(Number(v)) }, grid: { color: gridColor } },
           },
         },
       });

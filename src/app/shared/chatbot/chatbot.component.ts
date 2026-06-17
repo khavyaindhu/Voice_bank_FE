@@ -553,25 +553,30 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       (/show\s+(?:last|current|this|ytd|year)/i.test(lower) && !/fms|ledger|\b91\d{6}\b/i.test(lower));
 
     if (isReportCmd) {
-      // Detect date preset
+      // Detect date preset — include "past" phrasing (common in speech / casual text)
       let reportPreset = 'ytd';
       if      (/current\s*month|this\s*month|april/i.test(lower))        reportPreset = 'currentmonth';
-      else if (/last\s*month|previous\s*month|march/i.test(lower))       reportPreset = 'lastmonth';
-      else if (/last\s*week|past\s*7\s*days?/i.test(lower))              reportPreset = 'lastweek';
-      else if (/last\s*3\s*months?|last\s*three\s*months?/i.test(lower)) reportPreset = 'last3months';
-      else if (/ytd|year\s*to\s*date|this\s*year/i.test(lower))          reportPreset = 'ytd';
+      else if (/last\s*month|previous\s*month|past\s*month|march/i.test(lower)) reportPreset = 'lastmonth';
+      else if (/last\s*week|past\s*7\s*days?|past\s*week|last\s*7\s*days?/i.test(lower)) reportPreset = 'lastweek';
+      else if (/last\s*3\s*months?|last\s*three\s*months?|past\s*3\s*months?|past\s*three\s*months?/i.test(lower)) reportPreset = 'last3months';
+      else if (/ytd|year\s*to\s*date|this\s*year|past\s*year|last\s*year/i.test(lower)) reportPreset = 'ytd';
 
-      // Detect customer — patterns:
-      // 1. "transactions for [name/id]..."   2. "show [name/id] transactions..."
-      // 3. "spending summary of/for [name]..." 4. "[name] spending..."
-      // Allow digits so speech-spelled IDs like "c u s t 003" are captured fully.
+      // Detect customer
+      // 1. "transactions for [name]..."   2. "show [name] transactions..."
+      // 3. "spending summary for [name]..." / "spending summary for [name] for past 3 months"
       const custForMatch =
-        lower.match(/transactions?\s+for\s+([a-z][a-z0-9 ]{1,30}?)(?:\s+(?:current|last|this|ytd|year|month|week|summary)|$)/i) ??
+        lower.match(/transactions?\s+for\s+([a-z][a-z0-9 ]{1,30}?)(?:\s+(?:current|last|past|previous|this|ytd|year|month|week|summary)|$)/i) ??
         lower.match(/show\s+([a-z][a-z0-9 ]{2,30}?)\s+transactions?/i) ??
-        lower.match(/(?:spending|spend)\s+summary\s+(?:of|for)\s+([a-z][a-z0-9 ]{1,30}?)(?:\s+(?:current|last|this|ytd|year|month|week)|$)/i) ??
-        lower.match(/(?:summary\s+(?:of|for))\s+([a-z][a-z0-9 ]{1,30}?)(?:'s)?(?:\s+(?:spending|spend|current|last|this|ytd|year|month|week)|$)/i) ??
+        lower.match(/(?:spending|spend)\s+summary\s+for\s+([a-z][a-z0-9 ]+?)\s+for\s+(?:past|last|current|this)/i) ??
+        lower.match(/(?:spending|spend)\s+summary\s+(?:of|for)\s+([a-z][a-z0-9 ]{1,30}?)(?:\s+(?:current|last|past|previous|this|ytd|year|month|week)|$)/i) ??
+        lower.match(/(?:summary\s+(?:of|for))\s+([a-z][a-z0-9 ]{1,30}?)(?:'s)?(?:\s+(?:spending|spend|current|last|past|previous|this|ytd|year|month|week)|$)/i) ??
         lower.match(/([a-z][a-z0-9 ]{1,30}?)(?:'s)?\s+(?:spending|spend)\b/i);
-      const reportCustomer = custForMatch?.[1]?.trim() ?? '';
+      let reportCustomer = custForMatch?.[1]?.trim() ?? '';
+      // Strip trailing period phrases accidentally captured with the name
+      reportCustomer = reportCustomer
+        .replace(/\s+for\s+(?:past|last|current|this|previous).*$/i, '')
+        .replace(/\s+(?:past|last|current|this)\s+(?:3\s*months?|month|week|year).*$/i, '')
+        .trim();
 
       // Detect section
       const reportSection = isSpendingCmd

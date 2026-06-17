@@ -204,9 +204,10 @@
 .spend-charts {
   display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;
   .chart-card { margin-bottom: 0; }
-  .canvas-wrap { position: relative;
+  .canvas-wrap { position: relative; background: #FFFFFF;
     &.donut { height: 300px; }
     &.bars  { height: 300px; }
+    canvas  { display: block; }
   }
 }
 @media (max-width: 900px) {
