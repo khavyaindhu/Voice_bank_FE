@@ -29,7 +29,8 @@
     <p>{{ error() }}</p>
     <a routerLink="/loans" class="btn-outline">Back to Loans</a>
   </div>
-} @else if (progress(); as p) {
+} @else {
+  @if (progress(); as p) {
   <div class="stats-grid">
     <div class="stat-card card">
       <span class="stat-label">Total loan amount</span>
@@ -128,4 +129,5 @@
       </table>
     </div>
   </div>
+  }
 }
