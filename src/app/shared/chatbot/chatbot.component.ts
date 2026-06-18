@@ -402,11 +402,11 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     // ── Staff intents: navigate + pre-fill staff screens ────────────
     if (this.role === 'staff' && this.handleStaffIntent(commandMsg)) return;
 
-    // ── Loan EMI progress / analysis (customer) — before recurring buckets ─
-    if (this.role === 'customer' && await this.handleLoanEmiAnalysisIntent(commandMsg)) return;
-
-    // ── Recurring bill buckets (customer) ───────────────────────────
+    // ── Recurring bill buckets (customer) — before loan EMI analysis ──
     if (this.role === 'customer' && await this.handleRecurringBucketIntent(commandMsg)) return;
+
+    // ── Loan EMI progress / analysis (customer) ───────────────────────
+    if (this.role === 'customer' && await this.handleLoanEmiAnalysisIntent(commandMsg)) return;
 
     // ── Quick Pay: intercept active-flow replies ─────────────────────
     if (this.handleQuickPayResponse(commandMsg)) return;
@@ -590,6 +590,12 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       return true;
     }
 
+    // Edit amounts — set to value, increase/decrease by delta
+    if (await this.tryUpdateRecurringItemAmount(lower)) return true;
+
+    // Remove / skip / mark completed for this month
+    if (await this.tryRemoveOrCompleteRecurringItem(lower)) return true;
+
     // Pay all in bucket A
     if (
       /pay\s+all|make\s+all|process\s+all|send\s+all/i.test(lower) &&
@@ -630,65 +636,179 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       return true;
     }
 
-    // Landlord / rent increase by N
+    return false;
+  }
+
+  /** Remove bill for this month, or mark as paid/completed (e.g. "remove Netflix for this month"). */
+  private async tryRemoveOrCompleteRecurringItem(lower: string): Promise<boolean> {
+    if (!this.isRecurringBucketItemAction(lower)) return false;
+
+    const phrase = this.extractRecurringItemPhraseForRemoval(lower);
+    if (!phrase) {
+      this.addAssistantMessage(
+        `Which bill should I remove? Try *"remove Netflix for this month"* or *"I completed paying my car EMI"*.`,
+      );
+      return true;
+    }
+
+    const found = this.recurringBucketSvc.findItemByPhrase(phrase);
+    if (!found) {
+      this.addAssistantMessage(
+        `I couldn't find **"${phrase}"** in your recurring buckets. ` +
+        `Say *"list recurring payments in bucket A"* to see names.`,
+      );
+      return true;
+    }
+
+    try {
+      await this.recurringBucketSvc.deleteItem(found.bucket.id, found.item.id);
+      this.recurringBucketCtx.openBucket(found.bucket.nickname);
+      this.router.navigate(['/recurring-buckets']);
+      this.addAssistantMessage(
+        `Removed **${found.item.name}** from Bucket ${found.bucket.nickname} for this month. ✅`,
+      );
+      return true;
+    } catch {
+      this.addAssistantMessage(`Sorry — I couldn't remove **${found.item.name}**. Try from the Recurring Bills page.`);
+      return true;
+    }
+  }
+
+  private isRecurringBucketItemAction(lower: string): boolean {
+    if (
+      /(?:can you\s+|please\s+|could you\s+)?(?:remove|delete|cancel|skip|drop|unsubscribe from|stop)\b/i.test(lower) &&
+      /(?:netflix|hotstar|rent|emi|bill|subscription|utility|electric|mobile|car|bucket|recurring)/i.test(lower)
+    ) {
+      return true;
+    }
+    if (
+      /(?:completed|finished|done)\s+(?:paying\s+)?(?:my\s+|the\s+)?/i.test(lower) &&
+      /(?:emi|rent|netflix|hotstar|bill|subscription|car|mobile|electric)/i.test(lower)
+    ) {
+      return true;
+    }
+    if (/^(?:i\s+)?(?:have\s+)?(?:completed|finished|done)\s+paying/i.test(lower)) {
+      return true;
+    }
+    return false;
+  }
+
+  private extractRecurringItemPhraseForRemoval(lower: string): string {
+    const removeMatch = lower.match(
+      /(?:can you\s+|please\s+|could you\s+)?(?:remove|delete|cancel|skip|drop|unsubscribe from|stop)\s+(?:the\s+)?(.+?)(?:\s+(?:for|from)\s+(?:this\s+)?month|\s+this\s+month|\s+from\s+(?:my\s+)?(?:bucket|recurring).*|\s*$)/i,
+    );
+    if (removeMatch) {
+      return this.cleanRecurringItemPhrase(
+        removeMatch[1].replace(/\s+subscription\s*$/i, '').replace(/\s+for\s+this\s+month\s*$/i, ''),
+      );
+    }
+
+    const completedMatch = lower.match(
+      /(?:i\s+)?(?:have\s+)?(?:completed|finished|done)\s+(?:paying\s+)?(?:my\s+|the\s+)?(.+?)$/i,
+    );
+    if (completedMatch) {
+      return this.cleanRecurringItemPhrase(completedMatch[1]);
+    }
+
+    return '';
+  }
+
+  /** "modify house rent to 2500" / "increase house rent by 500" */
+  private async tryUpdateRecurringItemAmount(lower: string): Promise<boolean> {
+    const isEditIntent =
+      /(?:modify|update|change|edit|set|increase|decrease|reduce|raise|lower|cut|landlord|owner)/i.test(lower) &&
+      /(?:rent|bill|emi|netflix|hotstar|electric|utility|maintenance|subscription|amount)/i.test(lower);
+    if (!isEditIntent) return false;
+
     const landlordInc = lower.match(
-      /(?:house owner|landlord|owner).*(?:increased|raised|hiked).*(?:rent)?.*by\s+\$?([\d,]+)/i
+      /(?:house owner|landlord|owner).*(?:increased|raised|hiked|increase).*(?:rent)?.*by\s+(?:rs\.?|inr|₹|\$)?\s*([\d,]+(?:\.\d+)?)/i,
     );
     if (landlordInc) {
       const delta = parseFloat(landlordInc[1].replace(/,/g, ''));
-      const found = this.recurringBucketSvc.findItemByPhrase('rent');
-      if (found && delta > 0) {
-        const updated = await this.recurringBucketSvc.updateItem(found.bucket.id, found.item.id, { amountDelta: delta });
-        const item = updated.items.find(i => i.id === found.item.id);
-        this.recurringBucketCtx.openBucket(found.bucket.nickname);
-        this.recurringBucketCtx.flashItem(found.item.id);
-        this.router.navigate(['/recurring-buckets']);
-        this.addAssistantMessage(
-          `Updated **${found.item.name}** in Bucket ${found.bucket.nickname}: ` +
-          `+${this.formatCurrency(delta)} → **${this.formatCurrency(item?.amount ?? found.item.amount + delta)}**/month.`
-        );
-        return true;
-      }
+      if (delta > 0) return this.applyRecurringAmountUpdate('rent', { amountDelta: delta });
     }
 
-    const incMatch =
-      lower.match(/(?:increased|raised|hiked)\s+(?:the\s+)?(.+?)\s+by\s+\$?([\d,]+)/i) ??
-      lower.match(/(.+?)\s+(?:increased|raised|hiked)\s+by\s+\$?([\d,]+)/i);
+    const setMatch = lower.match(
+      /(?:modify|update|change|edit|set)\s+(?:the\s+)?(.+?)\s+(?:amount\s+)?to\s+(?:rs\.?|inr|₹|rupees?|\$)?\s*([\d,]+(?:\.\d+)?)/i,
+    );
+    if (setMatch) {
+      const phrase = this.cleanRecurringItemPhrase(setMatch[1]);
+      const amount = parseFloat(setMatch[2].replace(/,/g, ''));
+      if (amount > 0) return this.applyRecurringAmountUpdate(phrase, { amount });
+    }
+
+    const incMatch = lower.match(
+      /(?:increase|increased|raise|raised|hike|hiked|add)\s+(?:the\s+)?(.+?)\s+(?:amount\s+)?by\s+(?:rs\.?|inr|₹|\$)?\s*([\d,]+(?:\.\d+)?)/i,
+    );
     if (incMatch) {
-      const phrase = incMatch[1].trim();
+      const phrase = this.cleanRecurringItemPhrase(incMatch[1]);
       const delta = parseFloat(incMatch[2].replace(/,/g, ''));
-      const found = this.recurringBucketSvc.findItemByPhrase(phrase);
-      if (found && delta > 0) {
-        const updated = await this.recurringBucketSvc.updateItem(found.bucket.id, found.item.id, { amountDelta: delta });
-        const item = updated.items.find(i => i.id === found.item.id);
-        this.recurringBucketCtx.openBucket(found.bucket.nickname);
-        this.recurringBucketCtx.flashItem(found.item.id);
-        this.router.navigate(['/recurring-buckets']);
-        this.addAssistantMessage(
-          `Updated **${found.item.name}**: +${this.formatCurrency(delta)} → ` +
-          `**${this.formatCurrency(item?.amount ?? found.item.amount + delta)}**/month.`
-        );
-        return true;
-      }
+      if (delta > 0) return this.applyRecurringAmountUpdate(phrase, { amountDelta: delta });
     }
 
-    // Completed / paid — remove item (e.g. car EMI finished)
-    if (/(completed|finished|done|paid)/i.test(lower) && /(emi|payment|bill|rent|netflix|hotstar)/i.test(lower)) {
-      const tail = lower.replace(/^.*?(?:completed|finished|done|paid)\s+(?:paying|with|all\s+of\s+my\s+)?/i, '');
-      const found = this.recurringBucketSvc.findItemByPhrase(tail) ??
-        this.recurringBucketSvc.findItemByPhrase(lower);
-      if (found) {
-        await this.recurringBucketSvc.deleteItem(found.bucket.id, found.item.id);
-        this.recurringBucketCtx.openBucket(found.bucket.nickname);
-        this.router.navigate(['/recurring-buckets']);
-        this.addAssistantMessage(
-          `Removed **${found.item.name}** from Bucket ${found.bucket.nickname} — marked as completed this month. ✅`
-        );
-        return true;
-      }
+    const decMatch = lower.match(
+      /(?:decrease|decreased|reduce|reduced|lower|lowered|cut)\s+(?:the\s+)?(.+?)\s+(?:amount\s+)?by\s+(?:rs\.?|inr|₹|\$)?\s*([\d,]+(?:\.\d+)?)/i,
+    );
+    if (decMatch) {
+      const phrase = this.cleanRecurringItemPhrase(decMatch[1]);
+      const delta = parseFloat(decMatch[2].replace(/,/g, ''));
+      if (delta > 0) return this.applyRecurringAmountUpdate(phrase, { amountDelta: -delta });
+    }
+
+    const tailInc = lower.match(
+      /(.+?)\s+(?:increased|raised|hiked)\s+by\s+(?:rs\.?|inr|₹|\$)?\s*([\d,]+(?:\.\d+)?)/i,
+    );
+    if (tailInc) {
+      const phrase = this.cleanRecurringItemPhrase(tailInc[1]);
+      const delta = parseFloat(tailInc[2].replace(/,/g, ''));
+      if (delta > 0) return this.applyRecurringAmountUpdate(phrase, { amountDelta: delta });
     }
 
     return false;
+  }
+
+  private cleanRecurringItemPhrase(phrase: string): string {
+    return phrase.replace(/\s+amount\s*$/i, '').trim();
+  }
+
+  private async applyRecurringAmountUpdate(
+    phrase: string,
+    payload: { amount?: number; amountDelta?: number },
+  ): Promise<boolean> {
+    const found = this.recurringBucketSvc.findItemByPhrase(phrase);
+    if (!found) {
+      this.addAssistantMessage(
+        `I couldn't find **"${phrase}"** in your recurring buckets. ` +
+        `Try *"list recurring payments in bucket A"* to see bill names.`,
+      );
+      return true;
+    }
+
+    try {
+      const updated = await this.recurringBucketSvc.updateItem(found.bucket.id, found.item.id, payload);
+      const item = updated.items.find(i => i.id === found.item.id);
+      const newAmount = item?.amount ?? found.item.amount;
+      this.recurringBucketCtx.openBucket(found.bucket.nickname);
+      this.recurringBucketCtx.flashItem(found.item.id);
+      this.router.navigate(['/recurring-buckets']);
+
+      if (payload.amount != null) {
+        this.addAssistantMessage(
+          `Updated **${found.item.name}** in Bucket ${found.bucket.nickname}: ` +
+          `**${this.formatCurrency(newAmount)}**/month. ✅`,
+        );
+      } else if (payload.amountDelta != null) {
+        const sign = payload.amountDelta >= 0 ? '+' : '−';
+        this.addAssistantMessage(
+          `Updated **${found.item.name}** in Bucket ${found.bucket.nickname}: ` +
+          `${sign}${this.formatCurrency(Math.abs(payload.amountDelta))} → **${this.formatCurrency(newAmount)}**/month. ✅`,
+        );
+      }
+      return true;
+    } catch {
+      this.addAssistantMessage(`Sorry — I couldn't update **${found.item.name}**. Try again from the Recurring Bills page.`);
+      return true;
+    }
   }
 
   /** Parse "add mobile phone EMI of Rs 1000" / "add Netflix subscription $15.99". */
@@ -791,12 +911,25 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     const lower = msg.toLowerCase();
     if (/apply\s+(for\s+)?(a\s+)?(home|auto|car|personal)\s*loan/i.test(lower)) return null;
 
+    // Recurring bucket edits/removals — not loan analysis
+    if (this.isRecurringBucketItemAction(lower)) return null;
+    if (
+      /(?:modify|update|change|edit|set|increase|decrease|reduce|raise|lower|add)\s+/i.test(lower) &&
+      /(?:rent|bill|netflix|subscription|bucket|recurring)/i.test(lower) &&
+      !/(?:loan|analysis|history|progress)\s+(?:analysis|history|progress)/i.test(lower)
+    ) {
+      return null;
+    }
+
     const isAnalysisQuery =
       /(how\s+(long|much)|been\s+paying|paying\s+(for|since)|how\s+many\s+installments?|installments?\s+(completed|remaining|left|paid)|paid\s+(so\s+far|until\s+now|till\s+now)|total\s+paid|emi\s+(analysis|progress|summary|history|statement)|loan\s+(analysis|progress|summary|history|details?)|outstanding|remaining)/i.test(lower) ||
       (/\b(emi|installment|mortgage)\b/i.test(lower) && /\b(car|auto|home|house|mortgage|loan)\b/i.test(lower)) ||
       /(list|show|display|get)\s+(all\s+)?(my\s+)?(car|auto|home|mortgage)?\s*(emi|loan)?\s*(transactions?|payments?)/i.test(lower);
 
     if (!isAnalysisQuery) return null;
+
+    // "completed paying car EMI" is bucket action, not loan history
+    if (/(?:completed|finished|done)\s+paying/i.test(lower)) return null;
 
     if (/car|auto|vehicle|toyota/i.test(lower)) return 'auto';
     if (/home|house|mortgage|housing|property/i.test(lower)) return 'home';
