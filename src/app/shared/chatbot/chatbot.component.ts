@@ -184,6 +184,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       'cards':              'Cards',
       'loans':              'Loans',
       'loans/apply':        'Loan Application',
+      'loans/analysis':     'Loan EMI Analysis',
       // Staff screens
       'staff/dashboard':    'Staff Dashboard',
       'staff/customers':    'Customer Search',
@@ -401,11 +402,11 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     // ── Staff intents: navigate + pre-fill staff screens ────────────
     if (this.role === 'staff' && this.handleStaffIntent(commandMsg)) return;
 
+    // ── Loan EMI progress / analysis (customer) — before recurring buckets ─
+    if (this.role === 'customer' && await this.handleLoanEmiAnalysisIntent(commandMsg)) return;
+
     // ── Recurring bill buckets (customer) ───────────────────────────
     if (this.role === 'customer' && await this.handleRecurringBucketIntent(commandMsg)) return;
-
-    // ── Loan EMI progress / analysis (customer) ───────────────────
-    if (this.role === 'customer' && await this.handleLoanEmiAnalysisIntent(commandMsg)) return;
 
     // ── Quick Pay: intercept active-flow replies ─────────────────────
     if (this.handleQuickPayResponse(commandMsg)) return;
@@ -769,8 +770,12 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     try {
       const progress = await lastValueFrom(this.api.getLoanEmiProgressByType(loanType));
-      this.router.navigate(['/loans']);
-      this.addAssistantMessage(this.formatLoanEmiAnalysis(progress, showAllTx));
+      this.router.navigate(['/loans/analysis', loanType]);
+      const label = loanType === 'auto' ? 'Car Loan EMI Analysis' : 'Home Loan EMI Analysis';
+      this.addAssistantMessage(
+        `Opening **${label}** with charts and your full payment history.\n\n` +
+        this.formatLoanEmiAnalysis(progress, showAllTx)
+      );
       return true;
     } catch {
       this.addAssistantMessage(
@@ -787,7 +792,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (/apply\s+(for\s+)?(a\s+)?(home|auto|car|personal)\s*loan/i.test(lower)) return null;
 
     const isAnalysisQuery =
-      /(how\s+(long|much)|how\s+many\s+installments?|installments?\s+(completed|remaining|left|paid)|paid\s+(so\s+far|until\s+now|till\s+now)|total\s+paid|emi\s+(analysis|progress|summary|history|statement)|loan\s+(analysis|progress|summary|history|details?)|outstanding|remaining)/i.test(lower) ||
+      /(how\s+(long|much)|been\s+paying|paying\s+(for|since)|how\s+many\s+installments?|installments?\s+(completed|remaining|left|paid)|paid\s+(so\s+far|until\s+now|till\s+now)|total\s+paid|emi\s+(analysis|progress|summary|history|statement)|loan\s+(analysis|progress|summary|history|details?)|outstanding|remaining)/i.test(lower) ||
       (/\b(emi|installment|mortgage)\b/i.test(lower) && /\b(car|auto|home|house|mortgage|loan)\b/i.test(lower)) ||
       /(list|show|display|get)\s+(all\s+)?(my\s+)?(car|auto|home|mortgage)?\s*(emi|loan)?\s*(transactions?|payments?)/i.test(lower);
 
@@ -796,7 +801,6 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (/car|auto|vehicle|toyota/i.test(lower)) return 'auto';
     if (/home|house|mortgage|housing|property/i.test(lower)) return 'home';
 
-    if (/\b(emi|loan|installment|mortgage)\b/i.test(lower)) return 'home';
     return null;
   }
 
@@ -835,7 +839,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       }
     }
 
-    text += `\n\nSee details on the **Loans** page.`;
+    text += `\n\nFull charts and payment table are on **Loans → ${label} EMI Analysis**.`;
     return text;
   }
 

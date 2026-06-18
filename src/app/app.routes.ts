@@ -77,6 +77,11 @@ export const routes: Routes = [
         path: 'loans',
         children: [
           {
+            path: 'analysis/:loanType',
+            loadComponent: () => import('./modules/loans/loan-analysis/loan-analysis.component').then(m => m.LoanAnalysisComponent),
+            data: { screen: 'loans/analysis' },
+          },
+          {
             path: '',
             loadComponent: () => import('./modules/loans/loans.component').then(m => m.LoansComponent),
             data: { screen: 'loans' },

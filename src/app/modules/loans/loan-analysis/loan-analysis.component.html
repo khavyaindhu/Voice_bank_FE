@@ -1,0 +1,131 @@
+<div class="page-header">
+  <div class="header-row">
+    <div>
+      <a routerLink="/loans" class="back-link">
+        <span class="material-icons">arrow_back</span> All loans
+      </a>
+      <h2>
+        <span class="material-icons title-icon">{{ pageIcon() }}</span>
+        {{ pageTitle() }}
+      </h2>
+      <p>Installment progress, payment history, and visual breakdown.</p>
+    </div>
+    <div class="type-tabs">
+      <a routerLink="/loans/analysis/auto" class="type-tab" [class.active]="loanType() === 'auto'">
+        <span class="material-icons">directions_car</span> Car
+      </a>
+      <a routerLink="/loans/analysis/home" class="type-tab" [class.active]="loanType() === 'home'">
+        <span class="material-icons">home</span> Home
+      </a>
+    </div>
+  </div>
+</div>
+
+@if (loading()) {
+  <div class="loading-state card">Loading EMI analysis…</div>
+} @else if (error()) {
+  <div class="empty-state card">
+    <span class="material-icons">error_outline</span>
+    <p>{{ error() }}</p>
+    <a routerLink="/loans" class="btn-outline">Back to Loans</a>
+  </div>
+} @else if (progress(); as p) {
+  <div class="stats-grid">
+    <div class="stat-card card">
+      <span class="stat-label">Total loan amount</span>
+      <span class="stat-value">{{ p.loan.principalAmount | currency }}</span>
+      @if (loanType() === 'auto') {
+        <span class="stat-hint">Demo vehicle (~₹20L equivalent)</span>
+      }
+    </div>
+    <div class="stat-card card">
+      <span class="stat-label">Monthly EMI</span>
+      <span class="stat-value">{{ p.loan.emiAmount | currency }}</span>
+      <span class="stat-hint">{{ p.loan.interestRate }}% APR</span>
+    </div>
+    <div class="stat-card card highlight">
+      <span class="stat-label">Total paid so far</span>
+      <span class="stat-value">{{ p.totalPaid | currency }}</span>
+      <span class="stat-hint">{{ p.installmentsPaid }} installments</span>
+    </div>
+    <div class="stat-card card">
+      <span class="stat-label">Outstanding balance</span>
+      <span class="stat-value">{{ p.loan.outstandingBalance | currency }}</span>
+      <span class="stat-hint">Principal remaining</span>
+    </div>
+    <div class="stat-card card">
+      <span class="stat-label">Installments completed</span>
+      <span class="stat-value">{{ p.installmentsPaid }} <small>/ {{ p.loan.tenureMonths }}</small></span>
+      <span class="stat-hint">{{ p.installmentsRemaining }} remaining</span>
+    </div>
+    <div class="stat-card card">
+      <span class="stat-label">Paying since</span>
+      <span class="stat-value">{{ p.loan.startDate | date:'MMM d, yyyy' }}</span>
+      <span class="stat-hint">{{ p.monthsSinceStart }} months · {{ p.loan.loanNumber }}</span>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card card">
+      <h3>Principal vs outstanding</h3>
+      <div class="chart-wrap">
+        <canvas #balanceDonut></canvas>
+      </div>
+    </div>
+    <div class="chart-card card">
+      <h3>Installments paid vs remaining</h3>
+      <div class="chart-wrap">
+        <canvas #installmentDonut></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card card line-card">
+    <h3>Cumulative EMI paid over time</h3>
+    <p class="chart-sub">
+      @if (firstPaymentDate() && lastPaymentDate()) {
+        From {{ firstPaymentDate() | date:'MMM yyyy' }} to {{ lastPaymentDate() | date:'MMM yyyy' }}
+      }
+    </p>
+    <div class="line-wrap">
+      <canvas #cumulativeLine></canvas>
+    </div>
+  </div>
+
+  <div class="history-card card">
+    <div class="history-header">
+      <h3>EMI payment history</h3>
+      <span class="count-badge">{{ p.payments.length }} payments</span>
+    </div>
+    <div class="table-scroll">
+      <table class="emi-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Reference</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (tx of p.payments; track tx.id; let i = $index) {
+            <tr>
+              <td>{{ p.payments.length - i }}</td>
+              <td>{{ tx.completedAt | date:'MMM d, yyyy' }}</td>
+              <td>{{ tx.memo ?? tx.recipientName ?? 'EMI payment' }}</td>
+              <td class="mono">{{ tx.referenceNumber }}</td>
+              <td class="amount">{{ tx.amount | currency }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4"><strong>Total paid</strong></td>
+            <td class="amount"><strong>{{ p.totalPaid | currency }}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+}

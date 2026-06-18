@@ -35,6 +35,9 @@
             <span class="loan-number">{{ loan.loanNumber }}</span>
           </div>
           <span [class]="loan.status === 'active' ? 'badge-success' : 'badge-pending'">{{ loan.status }}</span>
+          <a [routerLink]="['/loans/analysis', loan.loanType]" class="btn-outline analysis-link">
+            <span class="material-icons">analytics</span> EMI Analysis
+          </a>
         </div>
 
         <div class="loan-progress">

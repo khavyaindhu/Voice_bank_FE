@@ -152,11 +152,6 @@ const INTENTS: { patterns: RegExp[]; response: (ctx: string, accounts?: Account[
     response: () => `**Personal Loan:** **10.99%–19.99% APR**\nAmounts: $1,000–$50,000 · Terms: 12–60 months\nFunds in **1–2 business days** after approval.`,
   },
   {
-    patterns: [/\bemi\b|monthly\s*pay|loan\s*detail|outstanding.*loan|my\s*loan/i],
-    response: () =>
-      `**Your Home Loan:**\n\n- 🏠 Outstanding: **$287,500**\n- 💰 Monthly EMI: **$2,270.15**\n- 📊 Rate: **6.75% APR**\n- 🏦 Lender: U.S. Bank\n\nSee full details on the **Loans** page.`,
-  },
-  {
     patterns: [/card\s*detail|reward\s*point|credit\s*limit|available\s*credit|my\s*card/i],
     response: () =>
       `**Your Credit Card (Visa ****4523):**\n\n- 💳 Limit: **$15,000**\n- 💰 Balance: **$3,245.50**\n- ✅ Available: **$11,754.50**\n- 🎁 Reward Points: **12,450 pts**\n- 📅 Min. Payment: **$65.00**\n\nFreeze/unfreeze on the **Cards** page.`,
@@ -250,7 +245,7 @@ function getScreenLabel(screen: string): string {
     'payments/card': 'Card Payment', 'payments/history': 'Transaction History',
     'accounts': 'Accounts', 'payees': 'Quick Pay', 'cards': 'Cards',
     'recurring-buckets': 'Recurring Bills',
-    'loans': 'Loans', 'loans/apply': 'Loan Application',
+    'loans': 'Loans', 'loans/apply': 'Loan Application', 'loans/analysis': 'Loan EMI Analysis',
     'staff/dashboard': 'Staff Dashboard', 'staff/customers': 'Customer Search',
     'staff/fms': 'FMS Account Lookup', 'staff/cards': 'Card Services', 'staff/reports': 'Reports',
   };
@@ -294,23 +289,34 @@ export class LocalChatService {
       return { text: recommendTransfer(amount, lower) };
     }
 
-    // 3. Knowledge base intents
+    // 3. Loan EMI analysis fallback (when chatbot API handler did not run)
+    const isLoanAnalysis =
+      /(how\s+(long|much)|been\s+paying|installments?|paid\s+(so\s+far|until)|emi\s+(analysis|progress|history)|loan\s+(analysis|progress|history)|list\s+all.*emi)/i.test(lower) &&
+      /(car|auto|home|house|mortgage|loan|emi)/i.test(lower);
+    if (isLoanAnalysis) {
+      const route = /car|auto|vehicle/i.test(lower) ? '/loans/analysis/auto' : '/loans/analysis/home';
+      const which = /car|auto|vehicle/i.test(lower) ? 'Car' : 'Home';
+      return {
+        text:
+          `Opening **${which} Loan EMI Analysis** with charts, installment progress, and full payment history.\n\n` +
+          `Use the **Car** / **Home** tabs on that page to switch loans.`,
+        navigateTo: route,
+      };
+    }
+
+    // 4. Knowledge base intents
     const isAddRecurring =
       /(?:add|create|register|set\s+up)/i.test(lower) &&
       /emi|subscription|recurring|bucket|monthly\s+bill/i.test(lower);
-    const isLoanAnalysis =
-      /(how\s+(long|much)|installments?|paid\s+(so\s+far|until)|emi\s+(analysis|progress|history)|loan\s+(analysis|progress|history)|list\s+all.*emi)/i.test(lower) &&
-      /(car|auto|home|house|mortgage|loan|emi)/i.test(lower);
 
     for (const intent of INTENTS) {
-      if (isAddRecurring && intent.patterns.some(p => /\bemi\b|my\s*loan/i.test(p.source))) continue;
-      if (isLoanAnalysis && intent.patterns.some(p => /\bemi\b|my\s*loan|outstanding.*loan/i.test(p.source))) continue;
+      if (isAddRecurring && intent.patterns.some(p => /\bemi\b/i.test(p.source))) continue;
       if (intent.patterns.some(p => p.test(lower))) {
         return { text: intent.response(screen, accounts) };
       }
     }
 
-    // 4. Fallback
+    // 5. Fallback
     const label = getScreenLabel(screen);
     return {
       text: `I'm here to help on the **${label}** screen! 😊\n\nTry asking:\n- *"Which transfer should I use?"*\n- *"I need to send $500 to a friend"*\n- *"Go to Wire Transfer"*\n- *"Fill form for me"*\n\nOr type **help** to see everything I can do.`,
