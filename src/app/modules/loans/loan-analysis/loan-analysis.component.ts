@@ -5,6 +5,7 @@ import {
   ViewChild,
   ElementRef,
   signal,
+  computed,
   inject,
   Injector,
   afterNextRender,
@@ -40,6 +41,11 @@ export class LoanAnalysisComponent implements OnInit, OnDestroy {
   loading = signal(true);
   error = signal<string | null>(null);
   loanType = signal<LoanTypeParam>('auto');
+
+  /** Used in template — `@if (x as p)` alias is not visible inside `@for`. */
+  readonly paymentList = computed(() => this.progress()?.payments ?? []);
+  readonly paymentCount = computed(() => this.paymentList().length);
+  readonly totalPaidAmount = computed(() => this.progress()?.totalPaid ?? 0);
 
   private balanceChart?: Chart;
   private installmentChart?: Chart;

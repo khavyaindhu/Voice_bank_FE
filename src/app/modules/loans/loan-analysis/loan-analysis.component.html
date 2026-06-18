@@ -95,7 +95,7 @@
   <div class="history-card card">
     <div class="history-header">
       <h3>EMI payment history</h3>
-      <span class="count-badge">{{ p.payments.length }} payments</span>
+      <span class="count-badge">{{ paymentCount() }} payments</span>
     </div>
     <div class="table-scroll">
       <table class="emi-table">
@@ -109,9 +109,9 @@
           </tr>
         </thead>
         <tbody>
-          @for (tx of p.payments; track tx.id; let i = $index) {
+          @for (tx of paymentList(); track tx.id; let i = $index) {
             <tr>
-              <td>{{ p.payments.length - i }}</td>
+              <td>{{ paymentCount() - i }}</td>
               <td>{{ tx.completedAt | date:'MMM d, yyyy' }}</td>
               <td>{{ tx.memo ?? tx.recipientName ?? 'EMI payment' }}</td>
               <td class="mono">{{ tx.referenceNumber }}</td>
@@ -122,7 +122,7 @@
         <tfoot>
           <tr>
             <td colspan="4"><strong>Total paid</strong></td>
-            <td class="amount"><strong>{{ p.totalPaid | currency }}</strong></td>
+            <td class="amount"><strong>{{ totalPaidAmount() | currency }}</strong></td>
           </tr>
         </tfoot>
       </table>
