@@ -303,6 +303,7 @@ export interface LoanEmiProgress {
     emiAmount: number;
     startDate: string;
     endDate: string;
+    nextDueDate: string;
     status: string;
     lenderName?: string;
   };
@@ -311,6 +312,8 @@ export interface LoanEmiProgress {
   totalPaid: number;
   principalRepaid: number;
   monthsSinceStart: number;
+  firstPaymentAt?: string | null;
+  lastPaymentAt?: string | null;
   payments: LoanEmiPayment[];
 }
 

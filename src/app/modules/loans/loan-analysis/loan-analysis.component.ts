@@ -7,8 +7,6 @@ import {
   signal,
   computed,
   inject,
-  Injector,
-  afterNextRender,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -31,7 +29,6 @@ export class LoanAnalysisComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private loanCtx = inject(LoanContextService);
-  private injector = inject(Injector);
 
   @ViewChild('balanceDonut') balanceDonut?: ElementRef<HTMLCanvasElement>;
   @ViewChild('installmentDonut') installmentDonut?: ElementRef<HTMLCanvasElement>;
@@ -66,7 +63,7 @@ export class LoanAnalysisComponent implements OnInit, OnDestroy {
       next: data => {
         this.progress.set(data);
         this.loading.set(false);
-        afterNextRender(() => this.renderCharts(), { injector: this.injector });
+        setTimeout(() => this.renderCharts(), 120);
       },
       error: () => {
         this.error.set(
@@ -83,18 +80,6 @@ export class LoanAnalysisComponent implements OnInit, OnDestroy {
 
   pageIcon(): string {
     return this.loanType() === 'auto' ? 'directions_car' : 'home';
-  }
-
-  firstPaymentDate(): string | null {
-    const payments = this.sortedPayments();
-    if (!payments.length) return null;
-    return payments[0].completedAt;
-  }
-
-  lastPaymentDate(): string | null {
-    const payments = this.sortedPayments();
-    if (!payments.length) return null;
-    return payments[payments.length - 1].completedAt;
   }
 
   sortedPayments() {

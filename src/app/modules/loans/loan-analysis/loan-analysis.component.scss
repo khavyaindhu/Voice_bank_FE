@@ -63,30 +63,35 @@
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--usb-gray-200);
   &.highlight {
     border-left: 4px solid var(--usb-green);
+    background: linear-gradient(135deg, #fff 0%, var(--usb-green-light) 120%);
   }
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--usb-gray-400);
-  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--usb-navy);
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .stat-value {
   font-size: 22px;
   font-weight: 700;
-  color: var(--usb-navy);
-  small { font-size: 14px; color: var(--usb-gray-500); font-weight: 500; }
+  color: var(--usb-gray-800);
+  small { font-size: 14px; color: var(--usb-gray-600); font-weight: 600; }
 }
 
 .stat-hint {
   font-size: 12px;
-  color: var(--usb-gray-500);
+  color: var(--usb-gray-600);
+  font-weight: 500;
 }
 
 .charts-row {
@@ -99,7 +104,12 @@
 
 .chart-card {
   padding: 20px;
-  h3 { font-size: 15px; color: var(--usb-navy); margin-bottom: 12px; }
+  h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--usb-navy);
+    margin-bottom: 12px;
+  }
 }
 
 .chart-wrap {
@@ -162,8 +172,9 @@
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.3px;
-    color: var(--usb-gray-400);
-    background: var(--usb-gray-50);
+    color: var(--usb-navy);
+    font-weight: 700;
+    background: var(--usb-gray-100);
     position: sticky;
     top: 0;
   }
@@ -173,6 +184,12 @@
   }
   .mono { font-family: monospace; font-size: 11px; color: var(--usb-gray-500); }
   .amount { font-weight: 600; color: var(--usb-navy); white-space: nowrap; }
+  .empty-row {
+    text-align: center;
+    padding: 24px 16px;
+    color: var(--usb-gray-600);
+    font-size: 13px;
+  }
 }
 
 .loading-state, .empty-state {

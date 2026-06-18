@@ -35,9 +35,6 @@
     <div class="stat-card card">
       <span class="stat-label">Total loan amount</span>
       <span class="stat-value">{{ p.loan.principalAmount | currency }}</span>
-      @if (loanType() === 'auto') {
-        <span class="stat-hint">Demo vehicle (~₹20L equivalent)</span>
-      }
     </div>
     <div class="stat-card card">
       <span class="stat-label">Monthly EMI</span>
@@ -64,6 +61,16 @@
       <span class="stat-value">{{ p.loan.startDate | date:'MMM d, yyyy' }}</span>
       <span class="stat-hint">{{ p.monthsSinceStart }} months · {{ p.loan.loanNumber }}</span>
     </div>
+    <div class="stat-card card">
+      <span class="stat-label">Loan end date</span>
+      <span class="stat-value">{{ p.loan.endDate | date:'MMM d, yyyy' }}</span>
+      <span class="stat-hint">{{ p.installmentsRemaining }} months left</span>
+    </div>
+    <div class="stat-card card">
+      <span class="stat-label">Next EMI due</span>
+      <span class="stat-value">{{ p.loan.nextDueDate | date:'MMM d, yyyy' }}</span>
+      <span class="stat-hint">{{ p.loan.emiAmount | currency }} monthly</span>
+    </div>
   </div>
 
   <div class="charts-row">
@@ -84,8 +91,10 @@
   <div class="chart-card card line-card">
     <h3>Cumulative EMI paid over time</h3>
     <p class="chart-sub">
-      @if (firstPaymentDate() && lastPaymentDate()) {
-        From {{ firstPaymentDate() | date:'MMM yyyy' }} to {{ lastPaymentDate() | date:'MMM yyyy' }}
+      @if (p.firstPaymentAt && p.lastPaymentAt) {
+        From {{ p.firstPaymentAt | date:'MMM yyyy' }} to {{ p.lastPaymentAt | date:'MMM yyyy' }}
+      } @else if (paymentCount() === 0) {
+        No payment history in the database yet.
       }
     </p>
     <div class="line-wrap">
@@ -110,6 +119,14 @@
           </tr>
         </thead>
         <tbody>
+          @if (paymentCount() === 0) {
+            <tr>
+              <td colspan="5" class="empty-row">
+                No EMI payments in the database for this loan.
+                Run <strong>npm run seed:prod</strong> on the backend, then log out and log in again.
+              </td>
+            </tr>
+          } @else {
           @for (tx of paymentList(); track tx.id; let i = $index) {
             <tr>
               <td>{{ paymentCount() - i }}</td>
@@ -118,6 +135,7 @@
               <td class="mono">{{ tx.referenceNumber }}</td>
               <td class="amount">{{ tx.amount | currency }}</td>
             </tr>
+          }
           }
         </tbody>
         <tfoot>

@@ -814,8 +814,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     let text =
       `${icon} **${label} EMI Analysis**\n\n` +
       `**${loan.loanNumber}** · ${loan.lenderName ?? 'U.S. Bank'}\n` +
-      `- Original amount: **${this.formatCurrency(loan.principalAmount)}**` +
-      (loan.loanType === 'auto' ? ' _(demo: ~₹20L vehicle purchase)_' : '') + `\n` +
+      `- Original amount: **${this.formatCurrency(loan.principalAmount)}**\n` +
       `- Monthly EMI: **${this.formatCurrency(loan.emiAmount)}** · ${loan.interestRate}% APR\n` +
       `- Started: **${start}** (${progress.monthsSinceStart} months ago)\n\n` +
       `**Progress**\n` +
