@@ -18,6 +18,16 @@ import { RecurringBucketService } from '../../core/services/recurring-bucket.ser
 import { RecurringBucketContextService } from '../../core/services/recurring-bucket-context.service';
 import { StaffContextService } from '../../core/services/staff-context.service';
 import { LocaleService } from '../../core/services/locale.service';
+import {
+  extractSpokenCustomerId,
+  injectCustomerIdIntoReportCommand,
+  normalizeSpokenCustomerIds,
+} from '../../core/utils/voice-customer-id.util';
+import {
+  cardFreezeToEnglishCommand,
+  detectNativeCardFreezeIntent,
+  parseCardFreezeIntent,
+} from '../../core/utils/voice-card-freeze.util';
 
 export interface ChatMessage {
   /** Unique ID used to update this message in-place after async translation */
@@ -984,6 +994,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
    */
   private handleStaffIntent(msg: string): boolean {
     const lower = msg.toLowerCase().trim();
+    const spokenCustId = extractSpokenCustomerId(msg);
 
     /**
      * Navigate to a staff route and then run `after()` to set a signal.
@@ -1010,7 +1021,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       /customer|client|cust/i.test(lower) ||
       /^(?:search|find|look\s*up)\s+[a-z]/i.test(lower)
     )) {
-      const name = custMatch[1].trim();
+      const name = spokenCustId ?? custMatch[1].trim();
       this.staffCtx.setCustomerSearch(name);
       this.addAssistantMessage(
         `🔍 Searching for customer **"${name}"**...\n\nNavigating to Customer Search and pre-filling the query.`
@@ -1053,7 +1064,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         lower.match(/(?:spending|spend)\s+summary\s+(?:of|for)\s+([a-z][a-z0-9 ]{1,30}?)(?:\s+(?:current|last|past|previous|this|ytd|year|month|week)|$)/i) ??
         lower.match(/(?:summary\s+(?:of|for))\s+([a-z][a-z0-9 ]{1,30}?)(?:'s)?(?:\s+(?:spending|spend|current|last|past|previous|this|ytd|year|month|week)|$)/i) ??
         lower.match(/([a-z][a-z0-9 ]{1,30}?)(?:'s)?\s+(?:spending|spend)\b/i);
-      let reportCustomer = custForMatch?.[1]?.trim() ?? '';
+      let reportCustomer = spokenCustId ?? custForMatch?.[1]?.trim() ?? '';
       // Strip trailing period phrases accidentally captured with the name
       reportCustomer = reportCustomer
         .replace(/\s+for\s+(?:past|last|current|this|previous).*$/i, '')
@@ -1131,12 +1142,12 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     // ── Card: Freeze / Unfreeze a specific customer's card ───────────
-    // "freeze Vijaya's card", "freeze ABC vendors card", "unfreeze Ramesh card"
-    const freezeRx = /(?:freeze|block|lock|unfreeze|unlock)\s+(.+?)'?s?\s+card/i;
-    const freezeMatch = msg.match(freezeRx);
-    if (freezeMatch) {
-      const target = freezeMatch[1].trim();
-      const action = /unfreeze|unlock/i.test(lower) ? 'unfreeze' : 'freeze';
+    // English: "freeze Vijaya's card" | SOV: "Vijaya card freeze"
+    // Tamil: "விஜயா கார்டை முடக்கு"
+    const langPrefix = this.locale.selected().code.split('-')[0];
+    const freezeIntent = parseCardFreezeIntent(msg, langPrefix);
+    if (freezeIntent) {
+      const { target, action } = freezeIntent;
       this.addAssistantMessage(
         `🔒 ${action === 'freeze' ? 'Freezing' : 'Unfreezing'} card for **"${target}"**...\n\nNavigating to Card Services and executing now.`
       );
@@ -1591,9 +1602,16 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   private async translateUserCommandForProcessing(content: string): Promise<string> {
     const lang = this.locale.selected();
-    if (lang.code === 'en') return content;
+    const spokenCustId = extractSpokenCustomerId(content);
+    const normalizedContent = normalizeSpokenCustomerIds(content);
 
-    const localCommand = this.translateKnownCommandLocally(content, lang.code);
+    if (lang.code === 'en') {
+      return spokenCustId
+        ? injectCustomerIdIntoReportCommand(normalizedContent, spokenCustId)
+        : normalizedContent;
+    }
+
+    const localCommand = this.translateKnownCommandLocally(normalizedContent, lang.code, spokenCustId);
     if (localCommand) {
       console.log('[Maya command] local multilingual command matched', {
         source: lang.code,
@@ -1612,7 +1630,10 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.isLoading.set(true);
     try {
       const result = await lastValueFrom(this.api.translateCommandToEnglish(content, lang.code));
-      const englishText = result.englishText?.trim() || content;
+      let englishText = result.englishText?.trim() || normalizedContent;
+      if (spokenCustId) {
+        englishText = injectCustomerIdIntoReportCommand(englishText, spokenCustId);
+      }
       console.log('[Maya command] English command', {
         source: lang.code,
         englishText,
@@ -1623,13 +1644,19 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         source: lang.code,
         error: err,
       });
-      return content;
+      return spokenCustId
+        ? injectCustomerIdIntoReportCommand(normalizedContent, spokenCustId)
+        : normalizedContent;
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  private translateKnownCommandLocally(content: string, langCode: string): string | null {
+  private translateKnownCommandLocally(
+    content: string,
+    langCode: string,
+    spokenCustId: string | null = null,
+  ): string | null {
     const lower = content
       .toLocaleLowerCase()
       .normalize('NFC')
@@ -1723,6 +1750,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     };
 
     const detectCustomer = (): string => {
+      if (spokenCustId) return spokenCustId;
       for (const [name, variants] of Object.entries(nativeCustomerNames)) {
         if (hasAny(variants)) return name;
       }
@@ -1753,6 +1781,13 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       const who = detectCustomer();
       const period = detectPeriod();
       return `spending summary${who ? ' for ' + who : ''}${period ? ' ' + period : ''}`.trim();
+    }
+
+    // Staff card freeze/block in native scripts — before generic navigation terms.
+    // e.g. Tamil "விஜயா கார்டை முடக்கு" → "freeze vijaya card"
+    if (this.role === 'staff') {
+      const freezeIntent = detectNativeCardFreezeIntent(lower, langCode);
+      if (freezeIntent) return cardFreezeToEnglishCommand(freezeIntent);
     }
 
     // Customer portal: navigate to payment history (not staff reports).
