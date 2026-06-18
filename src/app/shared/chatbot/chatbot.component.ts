@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { marked } from 'marked';
-import { ApiService, Account, CreateRecurringItemPayload, RecurringBucket, RecurringCategory, RecurringItem } from '../../core/services/api.service';
+import { ApiService, Account, CreateRecurringItemPayload, LoanEmiProgress, RecurringBucket, RecurringCategory, RecurringItem } from '../../core/services/api.service';
 import { ScreenContextService } from '../../core/services/screen-context.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FormFillService } from '../../core/services/form-fill.service';
@@ -142,7 +142,8 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     { label: '⚡ Send money via Zelle',             prompt: 'How do I send money with Zelle?' },
     { label: '🏠 Apply for a Home Loan',            prompt: 'How do I apply for a home loan? What are the steps?' },
     { label: '💰 Check my balance',                prompt: 'What are my current account balances?' },
-    { label: '📊 Loan EMI information',             prompt: 'What are my current loan details and EMI amount?' },
+    { label: '📊 Car EMI analysis',                 prompt: 'How much have I paid on my car loan EMI so far?' },
+    { label: '🏠 Home loan progress',               prompt: 'Show my home loan EMI analysis and how many installments are left' },
   ];
 
   readonly staffQuickActions: QuickAction[] = [
@@ -402,6 +403,9 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     // ── Recurring bill buckets (customer) ───────────────────────────
     if (this.role === 'customer' && await this.handleRecurringBucketIntent(commandMsg)) return;
+
+    // ── Loan EMI progress / analysis (customer) ───────────────────
+    if (this.role === 'customer' && await this.handleLoanEmiAnalysisIntent(commandMsg)) return;
 
     // ── Quick Pay: intercept active-flow replies ─────────────────────
     if (this.handleQuickPayResponse(commandMsg)) return;
@@ -751,6 +755,88 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       .join(' ');
 
     return { name, amount, category, bucketNick };
+  }
+
+  // ── Loan EMI progress & analysis (customer) ──────────────────────────────
+
+  private async handleLoanEmiAnalysisIntent(msg: string): Promise<boolean> {
+    const loanType = this.detectLoanAnalysisType(msg);
+    if (!loanType) return false;
+
+    const lower = msg.toLowerCase();
+    const showAllTx = /(all|every|full|complete)\s+(transactions?|payments?|history)/i.test(lower) ||
+      /list\s+(all\s+)?(car|auto|home|mortgage)?\s*(emi|loan)?\s*(transactions?|payments?)/i.test(lower);
+
+    try {
+      const progress = await lastValueFrom(this.api.getLoanEmiProgressByType(loanType));
+      this.router.navigate(['/loans']);
+      this.addAssistantMessage(this.formatLoanEmiAnalysis(progress, showAllTx));
+      return true;
+    } catch {
+      this.addAssistantMessage(
+        `I couldn't load your **${loanType} loan** EMI history. ` +
+        `If you just re-seeded the database, **log out and log in again** (johndoe / Demo@1234).`
+      );
+      return true;
+    }
+  }
+
+  /** Detect home vs auto loan analysis from natural language. */
+  private detectLoanAnalysisType(msg: string): 'home' | 'auto' | null {
+    const lower = msg.toLowerCase();
+    if (/apply\s+(for\s+)?(a\s+)?(home|auto|car|personal)\s*loan/i.test(lower)) return null;
+
+    const isAnalysisQuery =
+      /(how\s+(long|much)|how\s+many\s+installments?|installments?\s+(completed|remaining|left|paid)|paid\s+(so\s+far|until\s+now|till\s+now)|total\s+paid|emi\s+(analysis|progress|summary|history|statement)|loan\s+(analysis|progress|summary|history|details?)|outstanding|remaining)/i.test(lower) ||
+      (/\b(emi|installment|mortgage)\b/i.test(lower) && /\b(car|auto|home|house|mortgage|loan)\b/i.test(lower)) ||
+      /(list|show|display|get)\s+(all\s+)?(my\s+)?(car|auto|home|mortgage)?\s*(emi|loan)?\s*(transactions?|payments?)/i.test(lower);
+
+    if (!isAnalysisQuery) return null;
+
+    if (/car|auto|vehicle|toyota/i.test(lower)) return 'auto';
+    if (/home|house|mortgage|housing|property/i.test(lower)) return 'home';
+
+    if (/\b(emi|loan|installment|mortgage)\b/i.test(lower)) return 'home';
+    return null;
+  }
+
+  private formatLoanEmiAnalysis(progress: LoanEmiProgress, showAllTx: boolean): string {
+    const { loan } = progress;
+    const label = loan.loanType === 'auto' ? 'Car Loan' : loan.loanType === 'home' ? 'Home Loan' : `${loan.loanType} Loan`;
+    const icon = loan.loanType === 'auto' ? '🚗' : '🏠';
+    const start = new Date(loan.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const pctDone = Math.round((progress.installmentsPaid / loan.tenureMonths) * 100);
+
+    let text =
+      `${icon} **${label} EMI Analysis**\n\n` +
+      `**${loan.loanNumber}** · ${loan.lenderName ?? 'U.S. Bank'}\n` +
+      `- Original amount: **${this.formatCurrency(loan.principalAmount)}**` +
+      (loan.loanType === 'auto' ? ' _(demo: ~₹20L vehicle purchase)_' : '') + `\n` +
+      `- Monthly EMI: **${this.formatCurrency(loan.emiAmount)}** · ${loan.interestRate}% APR\n` +
+      `- Started: **${start}** (${progress.monthsSinceStart} months ago)\n\n` +
+      `**Progress**\n` +
+      `- ✅ **${progress.installmentsPaid} installments completed** (${pctDone}% of tenure)\n` +
+      `- ⏳ **${progress.installmentsRemaining} installments remaining** (of ${loan.tenureMonths})\n` +
+      `- 💰 **Total paid so far:** ${this.formatCurrency(progress.totalPaid)}\n` +
+      `- 📉 **Principal repaid:** ${this.formatCurrency(progress.principalRepaid)}\n` +
+      `- 🏦 **Outstanding balance:** ${this.formatCurrency(loan.outstandingBalance)}\n`;
+
+    const txLimit = showAllTx ? progress.payments.length : 6;
+    const recent = progress.payments.slice(0, txLimit);
+    if (recent.length > 0) {
+      text += `\n**EMI payment history** (${progress.payments.length} total):\n`;
+      text += recent.map(p => {
+        const when = new Date(p.completedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric', day: 'numeric' });
+        return `- ${when} — **${this.formatCurrency(p.amount)}** · ${p.memo ?? p.referenceNumber}`;
+      }).join('\n');
+      if (!showAllTx && progress.payments.length > txLimit) {
+        text += `\n_…and ${progress.payments.length - txLimit} earlier payments._`;
+        text += `\nSay *"list all car EMI transactions"* for the full list.`;
+      }
+    }
+
+    text += `\n\nSee details on the **Loans** page.`;
+    return text;
   }
 
   // ── Staff Intent Detection ───────────────────────────────────────────────

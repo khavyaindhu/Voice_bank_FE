@@ -57,6 +57,14 @@ export class ApiService {
   getLoan(id: string): Observable<Loan> {
     return this.http.get<Loan>(`${this.base}/loans/${id}`);
   }
+  getLoanEmiProgressByType(type: 'home' | 'auto' | 'personal' | 'student'): Observable<LoanEmiProgress> {
+    return this.http.get<LoanEmiProgress>(`${this.base}/loans/emi-progress`, {
+      params: new HttpParams().set('type', type),
+    });
+  }
+  getLoanEmiProgress(id: string): Observable<LoanEmiProgress> {
+    return this.http.get<LoanEmiProgress>(`${this.base}/loans/${id}/emi-progress`);
+  }
   applyForLoan(payload: LoanApplicationPayload): Observable<{ loan: Loan }> {
     return this.http.post<{ loan: Loan }>(`${this.base}/loans/apply`, payload);
   }
@@ -271,6 +279,39 @@ export interface Loan {
   status: string;
   loanNumber: string;
   lenderName?: string;
+  linkedPayeeId?: string;
+}
+
+export interface LoanEmiPayment {
+  id: string;
+  amount: number;
+  completedAt: string;
+  referenceNumber: string;
+  memo?: string;
+  recipientName?: string;
+}
+
+export interface LoanEmiProgress {
+  loan: {
+    id: string;
+    loanType: string;
+    loanNumber: string;
+    principalAmount: number;
+    outstandingBalance: number;
+    interestRate: number;
+    tenureMonths: number;
+    emiAmount: number;
+    startDate: string;
+    endDate: string;
+    status: string;
+    lenderName?: string;
+  };
+  installmentsPaid: number;
+  installmentsRemaining: number;
+  totalPaid: number;
+  principalRepaid: number;
+  monthsSinceStart: number;
+  payments: LoanEmiPayment[];
 }
 
 export interface AchPayload { fromAccount: string; toAccount: string; recipientName: string; routingNumber: string; amount: number; memo?: string; scheduledDate?: string; }

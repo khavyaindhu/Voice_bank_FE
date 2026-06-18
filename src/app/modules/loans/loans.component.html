@@ -60,6 +60,24 @@
             <span class="dl">Monthly EMI</span>
             <span class="dv">{{ loan.emiAmount | currency }}</span>
           </div>
+          @if (progress(loan._id); as p) {
+            <div class="loan-detail">
+              <span class="dl">Installments paid</span>
+              <span class="dv highlight">{{ p.installmentsPaid }} / {{ loan.tenureMonths }}</span>
+            </div>
+            <div class="loan-detail">
+              <span class="dl">Total EMI paid</span>
+              <span class="dv">{{ p.totalPaid | currency }}</span>
+            </div>
+            <div class="loan-detail">
+              <span class="dl">Remaining installments</span>
+              <span class="dv">{{ p.installmentsRemaining }}</span>
+            </div>
+            <div class="loan-detail">
+              <span class="dl">Paying since</span>
+              <span class="dv">{{ loan.startDate | date:'MMM yyyy' }} ({{ p.monthsSinceStart }} mo)</span>
+            </div>
+          }
           <div class="loan-detail">
             <span class="dl">Next Due Date</span>
             <span class="dv">{{ loan.nextDueDate | date:'MMM d, yyyy' }}</span>
