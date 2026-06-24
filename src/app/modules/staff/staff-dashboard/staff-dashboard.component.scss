@@ -52,14 +52,23 @@
 
   &:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
 
-  &.tile-navy  { background: #0F3460; color: white; }
-  &.tile-amber { background: #D97706; color: white; }
-  &.tile-red   { background: #CC0000; color: white; }
+  &.tile-navy   { background: #0F3460; color: white; }
+  &.tile-amber  { background: #D97706; color: white; }
+  &.tile-red    { background: #CC0000; color: white; }
+  &.tile-purple { background: #6D28D9; color: white; position: relative; }
 
   .tile-icon .material-icons { font-size: 36px; opacity: .9; }
   .tile-value { font-size: 28px; font-weight: 800; margin: 6px 0 2px; }
   .tile-label { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
   .tile-desc  { font-size: 11px; opacity: .75; }
+
+  .sa-lock {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 14px;
+    opacity: .7;
+  }
 }
 
 .section-title {

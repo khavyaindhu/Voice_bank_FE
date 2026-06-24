@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { superAdminGuard } from './core/guards/super-admin.guard';
 
 export const routes: Routes = [
   {
@@ -119,6 +120,12 @@ export const routes: Routes = [
         path: 'staff/reports',
         loadComponent: () => import('./modules/staff/staff-reports/staff-reports.component').then(m => m.StaffReportsComponent),
         data: { screen: 'staff/reports' },
+      },
+      {
+        path: 'staff/admin-settings',
+        canActivate: [superAdminGuard],
+        loadComponent: () => import('./modules/staff/super-admin-settings/super-admin-settings.component').then(m => m.SuperAdminSettingsComponent),
+        data: { screen: 'staff/admin-settings' },
       },
     ],
   },

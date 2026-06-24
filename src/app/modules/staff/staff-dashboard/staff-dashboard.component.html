@@ -9,8 +9,11 @@
 
   <!-- Tiles -->
   <div class="tiles-grid">
-    @for (tile of tiles; track tile.label) {
+    @for (tile of visibleTiles; track tile.label) {
       <a class="tile tile-{{ tile.color }}" [routerLink]="tile.route">
+        @if (tile.superAdminOnly) {
+          <span class="sa-lock material-icons">shield</span>
+        }
         <div class="tile-icon">
           <span class="material-icons">{{ tile.icon }}</span>
         </div>

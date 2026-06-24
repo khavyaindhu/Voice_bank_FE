@@ -6,11 +6,14 @@ import { environment } from '../../../environments/environment';
 import { RecurringBucketService } from './recurring-bucket.service';
 import { PayeeService } from './payee.service';
 
+export type UserRole = 'customer' | 'admin' | 'super_admin';
+
 export interface User {
   id: string;
   username: string;
   fullName: string;
   email: string;
+  role: UserRole;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -19,6 +22,15 @@ export class AuthService {
   private readonly USER_KEY = 'vb_user';
 
   currentUser = signal<User | null>(this.loadUser());
+
+  get isSuperAdmin(): boolean {
+    return this.currentUser()?.role === 'super_admin';
+  }
+
+  get isStaff(): boolean {
+    const role = this.currentUser()?.role;
+    return role === 'admin' || role === 'super_admin';
+  }
 
   constructor(
     private http: HttpClient,
