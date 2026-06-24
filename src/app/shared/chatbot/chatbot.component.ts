@@ -145,26 +145,26 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private pendingRecognitionRestart = false;
 
   readonly customerQuickActions: QuickAction[] = [
-    { label: '⚡ Send $500 to Father',             prompt: 'Maya, send $500 to Father' },
-    { label: '💸 Pay Vijaya $10,000',              prompt: 'Maya, send $10000 to Vijaya' },
-    { label: '🚨 Lost / Stolen Card',              prompt: 'Maya, I lost my card' },
-    { label: '💳 How to make a Wire Transfer?',    prompt: 'How do I make a wire transfer?' },
-    { label: '⚡ Send money via Zelle',             prompt: 'How do I send money with Zelle?' },
-    { label: '🏠 Apply for a Home Loan',            prompt: 'How do I apply for a home loan? What are the steps?' },
-    { label: '💰 Check my balance',                prompt: 'What are my current account balances?' },
-    { label: '📊 Car EMI analysis',                 prompt: 'How much have I paid on my car loan EMI so far?' },
-    { label: '🏠 Home loan progress',               prompt: 'Show my home loan EMI analysis and how many installments are left' },
+    { label: 'Send $500 to Father',             prompt: 'Maya, send $500 to Father' },
+    { label: 'Pay Vijaya $10,000',              prompt: 'Maya, send $10000 to Vijaya' },
+    { label: 'Lost / Stolen Card',              prompt: 'Maya, I lost my card' },
+    { label: 'How to make a Wire Transfer?',    prompt: 'How do I make a wire transfer?' },
+    { label: 'Send money via Zelle',             prompt: 'How do I send money with Zelle?' },
+    { label: 'Apply for a Home Loan',            prompt: 'How do I apply for a home loan? What are the steps?' },
+    { label: 'Check my balance',                prompt: 'What are my current account balances?' },
+    { label: 'Car EMI analysis',                 prompt: 'How much have I paid on my car loan EMI so far?' },
+    { label: 'Home loan progress',               prompt: 'Show my home loan EMI analysis and how many installments are left' },
   ];
 
   readonly staffQuickActions: QuickAction[] = [
-    { label: '🔍 Search customer Ramesh',          prompt: 'Search customer Ramesh' },
-    { label: '🔍 Find customer Vijaya',             prompt: 'Find customer Vijaya' },
-    { label: '📊 Show Agni test transactions',      prompt: 'Show Agni test transactions' },
-    { label: '📊 FMS Currency & Coin account',      prompt: 'Open Currency & Coin transactions' },
-    { label: '📊 Salary & Wages this month',        prompt: 'Show Salary & Wages transactions current month' },
-    { label: '🏠 Go to Staff Dashboard',            prompt: 'Go to staff dashboard' },
-    { label: '💳 Open Card Services',               prompt: 'Open card services' },
-    { label: '📈 Open Reports',                     prompt: 'Open reports' },
+    { label: 'Search customer Ramesh',          prompt: 'Search customer Ramesh' },
+    { label: 'Find customer Vijaya',             prompt: 'Find customer Vijaya' },
+    { label: 'Show Agni test transactions',      prompt: 'Show Agni test transactions' },
+    { label: 'FMS Currency & Coin account',      prompt: 'Open Currency & Coin transactions' },
+    { label: 'Salary & Wages this month',        prompt: 'Show Salary & Wages transactions current month' },
+    { label: 'Go to Staff Dashboard',            prompt: 'Go to staff dashboard' },
+    { label: 'Open Card Services',               prompt: 'Open card services' },
+    { label: 'Open Reports',                     prompt: 'Open reports' },
   ];
 
   get quickActions(): QuickAction[] {
@@ -263,8 +263,8 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     const name = this.auth.currentUser()?.fullName?.split(' ')[0] ?? 'there';
     const isStaff = this.role === 'staff';
     const greeting = isStaff
-      ? `Hi ${name}! 👋 I'm **Maya**, your U.S. Bank Staff Assistant.\n\nYou're on the **${this.screenLabel()}** screen. I can help you with:\n- FMS account & transaction lookup\n- Customer search by name or ID\n- Card freeze / dispute queries\n- ACH batch status & reports\n\nTry: _"Show Agni Test transactions for April"_ or _"Search customer Vijaya"_`
-      : `Hi ${name}! 👋 I'm **Maya**, your U.S. Bank Voice assistant.\n\nI can see you're on the **${this.screenLabel()}** screen. I'm here to help you with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balance enquiries\n- Loan applications & EMI details\n- Account & RD information\n\nWhat can I help you with today?`;
+      ? `Hi ${name}! I'm **Maya**, your U.S. Bank Staff Assistant.\n\nYou're on the **${this.screenLabel()}** screen. I can help you with:\n- FMS account & transaction lookup\n- Customer search by name or ID\n- Card freeze / dispute queries\n- ACH batch status & reports\n\nTry: _"Show Agni Test transactions for April"_ or _"Search customer Vijaya"_`
+      : `Hi ${name}! I'm **Maya**, your U.S. Bank Voice assistant.\n\nI can see you're on the **${this.screenLabel()}** screen. I'm here to help you with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balance enquiries\n- Loan applications & EMI details\n- Account & RD information\n\nWhat can I help you with today?`;
     // addAssistantMessage handles translation internally
     this.addAssistantMessage(greeting);
   }
@@ -281,7 +281,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     // Ensure accounts are loaded before asking the first step
     if (this.accounts().length === 0) {
-      this.addAssistantMessage('⏳ Loading your account details...');
+      this.addAssistantMessage('Loading your account details...');
       this.api.getAccounts().subscribe({
         next: a => { this.accounts.set(a); this.askNextFlowStep(); },
         error: () => this.askNextFlowStep(),
@@ -328,7 +328,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (/^(stop|cancel|abort|exit|quit|end)$/i.test(lower)) {
       this.guidedFlowActive.set(false);
       this.guidedFlowChips.set([]);
-      this.addAssistantMessage(`Form fill cancelled. Feel free to ask me anything! 😊`);
+      this.addAssistantMessage(`Form fill cancelled. Feel free to ask me anything!`);
       return true;
     }
 
@@ -360,9 +360,9 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.guidedFlowChips.set(chips);
       const hint = chips.length
         ? `\n\nChoose one of the options above, or type your answer directly.`
-        : `\n\n💡 Type **skip** to skip this field, or **cancel** to stop.`;
+        : `\n\nType **skip** to skip this field, or **cancel** to stop.`;
       this.addAssistantMessage(
-        `⚠️ I didn't catch that. Please answer the current question:\n\n` +
+        `I didn't catch that. Please answer the current question:\n\n` +
         result.step.question(this.accounts(), this.flowFilledFields) + hint
       );
       return true;
@@ -486,7 +486,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       {
         id:           'freeze',
         number:       1,
-        icon:         '🔒',
+        icon:         '',
         title:        `Freeze your ${card.type} ****${card.last4} right now`,
         subtitle:     'Block all new transactions instantly — reversible anytime',
         selected:     true,
@@ -496,7 +496,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       {
         id:           'dispute',
         number:       2,
-        icon:         '📋',
+        icon:         '',
         title:        'File a dispute for recent unrecognized charges',
         subtitle:     'Investigate & refund unauthorized transactions (7–10 days)',
         selected:     true,
@@ -506,7 +506,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       {
         id:           'replacement',
         number:       3,
-        icon:         '📦',
+        icon:         '',
         title:        'Request a replacement card',
         subtitle:     `New card mailed to your address on file — arrives in 3–5 business days`,
         selected:     true,
@@ -517,7 +517,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     // Maya's initial acknowledgement
     this.addAssistantMessage(
-      `🚨 **I'll take care of this immediately!**\n\n` +
+      `**I'll take care of this immediately!**\n\n` +
       `Your **${card.type} ****${card.last4}** may be compromised. Should I:`
     );
 
@@ -574,7 +574,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
           this.router.navigate(['/recurring-buckets']);
           this.addAssistantMessage(
             `Added **${parsedAdd.name}** to Bucket ${bucket.nickname} — ` +
-            `${this.formatCurrency(parsedAdd.amount)}/month (${parsedAdd.category}). ✅`
+            `${this.formatCurrency(parsedAdd.amount)}/month (${parsedAdd.category}).`
           );
         } catch (err: unknown) {
           const message = (err as { error?: { message?: string } })?.error?.message ?? 'Could not add that bill.';
@@ -675,7 +675,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.recurringBucketCtx.openBucket(found.bucket.nickname);
       this.router.navigate(['/recurring-buckets']);
       this.addAssistantMessage(
-        `Removed **${found.item.name}** from Bucket ${found.bucket.nickname} for this month. ✅`,
+        `Removed **${found.item.name}** from Bucket ${found.bucket.nickname} for this month.`,
       );
       return true;
     } catch {
@@ -805,13 +805,13 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       if (payload.amount != null) {
         this.addAssistantMessage(
           `Updated **${found.item.name}** in Bucket ${found.bucket.nickname}: ` +
-          `**${this.formatCurrency(newAmount)}**/month. ✅`,
+          `**${this.formatCurrency(newAmount)}**/month.`,
         );
       } else if (payload.amountDelta != null) {
         const sign = payload.amountDelta >= 0 ? '+' : '−';
         this.addAssistantMessage(
           `Updated **${found.item.name}** in Bucket ${found.bucket.nickname}: ` +
-          `${sign}${this.formatCurrency(Math.abs(payload.amountDelta))} → **${this.formatCurrency(newAmount)}**/month. ✅`,
+          `${sign}${this.formatCurrency(Math.abs(payload.amountDelta))} → **${this.formatCurrency(newAmount)}**/month.`,
         );
       }
       return true;
@@ -950,7 +950,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private formatLoanEmiAnalysis(progress: LoanEmiProgress, showAllTx: boolean): string {
     const { loan } = progress;
     const label = loan.loanType === 'auto' ? 'Car Loan' : loan.loanType === 'home' ? 'Home Loan' : `${loan.loanType} Loan`;
-    const icon = loan.loanType === 'auto' ? '🚗' : '🏠';
+    const icon = loan.loanType === 'auto' ? '' : '';
     const start = new Date(loan.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const pctDone = Math.round((progress.installmentsPaid / loan.tenureMonths) * 100);
 
@@ -961,11 +961,11 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       `- Monthly EMI: **${this.formatCurrency(loan.emiAmount)}** · ${loan.interestRate}% APR\n` +
       `- Started: **${start}** (${progress.monthsSinceStart} months ago)\n\n` +
       `**Progress**\n` +
-      `- ✅ **${progress.installmentsPaid} installments completed** (${pctDone}% of tenure)\n` +
-      `- ⏳ **${progress.installmentsRemaining} installments remaining** (of ${loan.tenureMonths})\n` +
-      `- 💰 **Total paid so far:** ${this.formatCurrency(progress.totalPaid)}\n` +
-      `- 📉 **Principal repaid:** ${this.formatCurrency(progress.principalRepaid)}\n` +
-      `- 🏦 **Outstanding balance:** ${this.formatCurrency(loan.outstandingBalance)}\n`;
+      `- **${progress.installmentsPaid} installments completed** (${pctDone}% of tenure)\n` +
+      `- **${progress.installmentsRemaining} installments remaining** (of ${loan.tenureMonths})\n` +
+      `- **Total paid so far:** ${this.formatCurrency(progress.totalPaid)}\n` +
+      `- **Principal repaid:** ${this.formatCurrency(progress.principalRepaid)}\n` +
+      `- **Outstanding balance:** ${this.formatCurrency(loan.outstandingBalance)}\n`;
 
     const txLimit = showAllTx ? progress.payments.length : 6;
     const recent = progress.payments.slice(0, txLimit);
@@ -1024,7 +1024,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       const name = spokenCustId ?? custMatch[1].trim();
       this.staffCtx.setCustomerSearch(name);
       this.addAssistantMessage(
-        `🔍 Searching for customer **"${name}"**...\n\nNavigating to Customer Search and pre-filling the query.`
+        `Searching for customer **"${name}"**...\n\nNavigating to Customer Search and pre-filling the query.`
       );
       setTimeout(() => this.router.navigate(['/staff/customers']), 800);
       return true;
@@ -1086,7 +1086,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         reportSection === 'spending'     ? 'spending summary'    : 'summary';
 
       this.addAssistantMessage(
-        `📈 Opening **Reports** — ${presetLabel[reportPreset]}` +
+        `Opening **Reports** — ${presetLabel[reportPreset]}` +
         (reportCustomer ? ` for **${reportCustomer}**` : '') +
         `...\n\nLoading ${sectionLabel} now.`
       );
@@ -1135,7 +1135,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
                           preset === 'ytd'     ? ' (year-to-date)'   : '';
 
       this.addAssistantMessage(
-        `📊 Opening FMS Account Lookup for **"${searchTerm}"**${presetLabel}...\n\nNavigating and loading transactions.`
+        `Opening FMS Account Lookup for **"${searchTerm}"**${presetLabel}...\n\nNavigating and loading transactions.`
       );
       setTimeout(() => this.router.navigate(['/staff/fms']), 800);
       return true;
@@ -1149,7 +1149,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (freezeIntent) {
       const { target, action } = freezeIntent;
       this.addAssistantMessage(
-        `🔒 ${action === 'freeze' ? 'Freezing' : 'Unfreezing'} card for **"${target}"**...\n\nNavigating to Card Services and executing now.`
+        `${action === 'freeze' ? 'Freezing' : 'Unfreezing'} card for **"${target}"**...\n\nNavigating to Card Services and executing now.`
       );
       goto('/staff/cards', () => this.staffCtx.setCardFreeze(target));
       return true;
@@ -1164,7 +1164,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       let tab = cardFilterMatch[1].toLowerCase();
       if (tab.startsWith('expiring')) tab = 'expiring';
       const tabLabel = tab === 'expiring' ? 'expiring soon' : tab;
-      this.addAssistantMessage(`💳 Filtering Card Services to show **${tabLabel}** cards...`);
+      this.addAssistantMessage(`Filtering Card Services to show **${tabLabel}** cards...`);
       goto('/staff/cards', () => this.staffCtx.setCardFilter(tab));
       return true;
     }
@@ -1173,7 +1173,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (/(?:go\s+to|open|show|switch(?:\s+to)?|change(?:\s+to)?|navigate(?:\s+to)?|take\s+me\s+to|move\s+to|jump\s+to|load|visit)\s+(?:the\s+)?card\s+services?(?:\s+(?:tab|page|screen|section))?/i.test(lower) ||
         /card\s+(?:management|admin|lookup)/i.test(lower) ||
         /show\s+(?:all\s+)?cards?$/i.test(lower)) {
-      this.addAssistantMessage(`💳 Navigating to **Card Services**...`);
+      this.addAssistantMessage(`Navigating to **Card Services**...`);
       goto('/staff/cards', () => this.staffCtx.setCardFilter('all'));
       return true;
     }
@@ -1181,7 +1181,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     // ── Staff Dashboard ──────────────────────────────────────────────
     if (/(?:go\s+to|open|show|switch(?:\s+to)?|change(?:\s+to)?|navigate(?:\s+to)?|take\s+me\s+to|move\s+to|jump\s+to|load|visit)\s+(?:the\s+)?(?:staff\s+)?dashboard(?:\s+(?:tab|page|screen|section))?/i.test(lower) ||
         /staff\s+(?:home|main|overview)/i.test(lower)) {
-      this.addAssistantMessage(`🏠 Navigating to **Staff Dashboard**...`);
+      this.addAssistantMessage(`Navigating to **Staff Dashboard**...`);
       setTimeout(() => this.router.navigate(['/staff/dashboard']), 500);
       return true;
     }
@@ -1189,7 +1189,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     // ── Reports ──────────────────────────────────────────────────────
     if (/(?:go\s+to|open|show|switch(?:\s+to)?|change(?:\s+to)?|navigate(?:\s+to)?|take\s+me\s+to|move\s+to|jump\s+to|load|visit)\s+(?:the\s+)?(?:staff\s+)?reports?(?:\s+(?:tab|page|screen|section))?/i.test(lower) ||
         /staff\s+reports?/i.test(lower)) {
-      this.addAssistantMessage(`📈 Navigating to **Reports**...`);
+      this.addAssistantMessage(`Navigating to **Reports**...`);
       setTimeout(() => this.router.navigate(['/staff/reports']), 500);
       return true;
     }
@@ -1235,7 +1235,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
                   ? { ...a, status: 'done' as const, resultDetail: 'Blocked instantly' }
                   : a)
               );
-              return `🔒 **Card frozen** — Visa ****${this.emergencyCard.card.last4} is now blocked`;
+              return `**Card frozen** — Visa ****${this.emergencyCard.card.last4} is now blocked`;
             }
             case 'dispute': {
               const ref = await this.emergencyCard.fileDispute();
@@ -1244,7 +1244,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
                   ? { ...a, status: 'done' as const, resultDetail: `Ref: ${ref}` }
                   : a)
               );
-              return `📋 **Dispute filed** — Reference **${ref}** (resolved in 7–10 business days)`;
+              return `**Dispute filed** — Reference **${ref}** (resolved in 7–10 business days)`;
             }
             case 'replacement': {
               const eta = await this.emergencyCard.requestReplacement();
@@ -1253,7 +1253,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
                   ? { ...a, status: 'done' as const, resultDetail: `Arrives in ${eta}` }
                   : a)
               );
-              return `📦 **Replacement requested** — New card arrives in **${eta}**`;
+              return `**Replacement requested** — New card arrives in **${eta}**`;
             }
             default: return null;
           }
@@ -1271,15 +1271,15 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     const lines  = resultLines.filter(Boolean) as string[];
     const header = lines.length === 3
-      ? `✅ **Done. All three actions completed!**`
-      : `✅ **Done! ${lines.length} action${lines.length > 1 ? 's' : ''} completed.**`;
+      ? `**Done. All three actions completed!**`
+      : `**Done! ${lines.length} action${lines.length > 1 ? 's' : ''} completed.**`;
 
     this.addAssistantMessage(
       `${header}\n\n` +
       lines.join('\n') +
-      `\n\n📱 You'll receive an **SMS & email confirmation** shortly.\n` +
-      `📞 Need immediate help? **1-800-285-8585**\n\n` +
-      `_Stay safe — we've got you covered. 🛡️_`
+      `\n\nYou'll receive an **SMS & email confirmation** shortly.\n` +
+      `Need immediate help? **1-800-285-8585**\n\n` +
+      `_Stay safe — we've got you covered._`
     );
   }
 
@@ -1299,7 +1299,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.addAssistantMessage(
         `No problem — your card has **not** been changed.\n\n` +
         `If you need help later, just say **"I lost my card"**.\n` +
-        `📞 Urgent? Call **1-800-285-8585** anytime.`
+        `Urgent? Call **1-800-285-8585** anytime.`
       );
       return true;
     }
@@ -1345,7 +1345,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     // If accounts haven't loaded yet, fetch them first then show widget
     if (this.accounts().length === 0) {
-      this.addAssistantMessage('⏳ Loading your account details…');
+      this.addAssistantMessage('Loading your account details…');
       this.api.getAccounts().subscribe({
         next: a => {
           this.accounts.set(a);
@@ -1353,7 +1353,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
         },
         error: () => {
           this.quickPayPending.set(null);
-          this.addAssistantMessage('❌ Unable to load your accounts. Please try again.');
+          this.addAssistantMessage('Unable to load your accounts. Please try again.');
         },
       });
     } else {
@@ -1380,7 +1380,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     // Maya's acknowledgement text
     this.addAssistantMessage(
-      `Got it! Here's a summary of your payment. Review and confirm below 👇`
+      `Got it! Here's a summary of your payment. Review and confirm below`
     );
 
     // Append the confirm widget message
@@ -1418,7 +1418,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     if (!fromAccountId) {
       this.quickPayExecuting.set(false);
-      this.addAssistantMessage('❌ No debit account found. Please run the seed script on the backend (`npx ts-node src/seed.ts`) to set up demo accounts.');
+      this.addAssistantMessage('No debit account found. Please run the seed script on the backend (`npx ts-node src/seed.ts`) to set up demo accounts.');
       return;
     }
 
@@ -1439,17 +1439,17 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
       const eta = payee.transferType === 'wire' ? 'same-day (before 4PM CT)' : '1–3 business days';
       this.addAssistantMessage(
-        `✅ **Payment Confirmed!**\n\n` +
-        `💸 **${fmt}** sent to **${payee.nickname}**\n` +
-        `🏦 ${payee.bankName} · ${PayeeService.masked(payee.accountNumber)}\n` +
-        `📋 Reference: **${ref}**\n` +
-        `⏱ Expected: ${eta}\n\n` +
-        `_You'll receive an email confirmation shortly. 🛡️_`
+        `**Payment Confirmed!**\n\n` +
+        `**${fmt}** sent to **${payee.nickname}**\n` +
+        `${payee.bankName} · ${PayeeService.masked(payee.accountNumber)}\n` +
+        `Reference: **${ref}**\n` +
+        `Expected: ${eta}\n\n` +
+        `_You'll receive an email confirmation shortly._`
       );
     } catch (err: any) {
       this.quickPayExecuting.set(false);
       this.addAssistantMessage(
-        `⚠️ Payment failed: ${err?.error?.message ?? 'Please try again or use the Quick Pay page.'}`
+        `Payment failed: ${err?.error?.message ?? 'Please try again or use the Quick Pay page.'}`
       );
     }
   }
@@ -1474,14 +1474,14 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
           this.accounts.set(a);
           fromAccountId = this.pickDebitAccount();
           if (fromAccountId) this._showBucketPayWidget(bucket, fromAccountId);
-          else this.addAssistantMessage('❌ No debit account found to pay from.');
+          else this.addAssistantMessage('No debit account found to pay from.');
         },
-        error: () => this.addAssistantMessage('❌ Unable to load accounts.'),
+        error: () => this.addAssistantMessage('Unable to load accounts.'),
       });
       return;
     }
     if (!fromAccountId) {
-      this.addAssistantMessage('❌ No debit account found to pay from.');
+      this.addAssistantMessage('No debit account found to pay from.');
       return;
     }
     this._showBucketPayWidget(bucket, fromAccountId);
@@ -1520,15 +1520,15 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.paymentHistory.notifyPaymentRecorded();
       this.bucketPayExecuting.set(false);
       this.addAssistantMessage(
-        `✅ **Bucket ${bp.bucketNickname} — Payment complete!**\n\n` +
+        `**Bucket ${bp.bucketNickname} — Payment complete!**\n\n` +
         `Paid **${res.transactions.length}** bills · **${this.formatCurrency(res.totalPaid)}** total.\n` +
-        (res.errors.length ? `⚠️ ${res.errors.length} item(s) skipped.\n` : '') +
+        (res.errors.length ? `${res.errors.length} item(s) skipped.\n` : '') +
         `\n_View Transaction History for details._`
       );
     } catch (err: unknown) {
       this.bucketPayExecuting.set(false);
       const message = (err as { error?: { message?: string } })?.error?.message ?? 'Pay-all failed.';
-      this.addAssistantMessage(`⚠️ ${message}`);
+      this.addAssistantMessage(`${message}`);
     }
   }
 
@@ -2238,10 +2238,10 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     try {
       console.log('[Maya translate] → calling API for', lang.label);
       const result = await lastValueFrom(this.api.translateText(text, lang.code));
-      console.log('[Maya translate] ✓ success, preview:', result.translatedText?.substring(0, 60));
+      console.log('[Maya translate] success, preview:', result.translatedText?.substring(0, 60));
       return result.translatedText ?? text;
     } catch (err) {
-      console.error(`[Maya translate] ✗ failed for ${lang.label} (${lang.code}):`, err);
+      console.error(`[Maya translate] failed for ${lang.label} (${lang.code}):`, err);
       throw err;
     }
   }

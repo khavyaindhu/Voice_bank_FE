@@ -42,7 +42,7 @@ const wireSteps: FlowStep[] = [
   {
     field: 'isInternational',
     question: () =>
-      `Let's fill the Wire Transfer form together! 🎯\n\n` +
+      `Let's fill the Wire Transfer form together!\n\n` +
       `**Step 1 of 7:** What type of wire transfer?\n\n` +
       `- **Domestic** — within the USA\n` +
       `- **International** — outside the USA`,
@@ -124,7 +124,7 @@ const achSteps: FlowStep[] = [
       const list = accounts.filter(a => a.type !== 'rd')
         .map(a => `- **${a.nickname}** (${a.maskedNumber}) — $${a.availableBalance.toLocaleString()} available`)
         .join('\n');
-      return `Let's fill the ACH Transfer form! 🎯\n\n**Step 1 of 6:** Which account to send from?\n\n${list}`;
+      return `Let's fill the ACH Transfer form!\n\n**Step 1 of 6:** Which account to send from?\n\n${list}`;
     },
     parse: (input, accounts) => {
       const match = matchAccount(input, accounts.filter(a => a.type !== 'rd'));
@@ -182,7 +182,7 @@ const zelleSteps: FlowStep[] = [
       const list = accounts.filter(a => a.type === 'checking' || a.type === 'savings')
         .map(a => `- **${a.nickname}** (${a.maskedNumber}) — $${a.availableBalance.toLocaleString()} available`)
         .join('\n');
-      return `Let's send money via Zelle! ⚡\n\n**Step 1 of 4:** Which account to send from?\n\n${list}`;
+      return `Let's send money via Zelle!\n\n**Step 1 of 4:** Which account to send from?\n\n${list}`;
     },
     parse: (input, accounts) => {
       const match = matchAccount(input, accounts.filter(a => a.type === 'checking' || a.type === 'savings'));
@@ -305,7 +305,7 @@ export class GuidedFlowService {
         return `- **${labels[k] ?? k}:** ${display}`;
       }).join('\n');
 
-    return `✅ **${screenNames[screen] ?? screen} form filled!**\n\n${lines}\n\n` +
-      `Please **review the form** and click the **Submit button** when ready. 🚀`;
+    return `**${screenNames[screen] ?? screen} form filled!**\n\n${lines}\n\n` +
+      `Please **review the form** and click the **Submit button** when ready.`;
   }
 }

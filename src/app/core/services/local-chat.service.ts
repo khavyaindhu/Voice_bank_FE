@@ -54,7 +54,7 @@ function normalizeNavMessage(message: string): string {
 const INTENTS: { patterns: RegExp[]; response: (ctx: string, accounts?: Account[]) => string }[] = [
   {
     patterns: [/^(hi|hello|hey|good\s*(morning|afternoon|evening))/i],
-    response: (screen) => `Hello! 👋 I'm **Maya**, your U.S. Bank Voice assistant.\n\nYou're on the **${getScreenLabel(screen)}** screen. I can help with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balances\n- Loan guidance\n- Account & RD details\n\nWhat can I help you with today?`,
+    response: (screen) => `Hello! I'm **Maya**, your U.S. Bank Voice assistant.\n\nYou're on the **${getScreenLabel(screen)}** screen. I can help with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balances\n- Loan guidance\n- Account & RD details\n\nWhat can I help you with today?`,
   },
 
   // ── Transfer type guidance ────────────────────────────────────────
@@ -62,21 +62,21 @@ const INTENTS: { patterns: RegExp[]; response: (ctx: string, accounts?: Account[
     patterns: [/which\s*transfer|what\s*type.*transfer|difference.*transfer|compare.*transfer|transfer.*compare|best\s*way.*send|which.*payment.*method|when.*use.*wire|when.*use.*ach|when.*use.*zelle/i],
     response: () =>
       `**Choosing the Right Transfer Method:**\n\n` +
-      `⚡ **Zelle** — Best for **small P2P payments**\n` +
+      `**Zelle** — Best for **small P2P payments**\n` +
       `   · Sending money to friends, family, or individuals\n` +
       `   · Amounts up to **$2,500/day** · Instant · Free · Irreversible\n` +
       `   · Example: splitting a restaurant bill, paying a friend back\n\n` +
-      `🔄 **ACH Transfer** — Best for **regular & recurring payments**\n` +
+      `**ACH Transfer** — Best for **regular & recurring payments**\n` +
       `   · Payroll, rent, vendor invoices, subscriptions, inter-bank transfers\n` +
       `   · Any amount (up to $25,000/day) · 1–3 business days · Usually free\n` +
       `   · Can be reversed within 2 days if needed\n` +
       `   · Example: paying monthly rent, sending payroll to employees\n\n` +
-      `🏦 **Wire Transfer** — Best for **high-value & time-critical payments**\n` +
+      `**Wire Transfer** — Best for **high-value & time-critical payments**\n` +
       `   · Real estate purchases, large business payments, international transfers\n` +
       `   · Typically **$10,000+** · Same-day (before 4 PM CT) · Fee: $25–$55\n` +
       `   · Irreversible — verify all details before sending\n` +
       `   · Example: down payment on a property, large vendor settlement\n\n` +
-      `💡 **Quick rule:** Friend/small → **Zelle** · Regular/payroll → **ACH** · Large/urgent → **Wire**`,
+      `**Quick rule:** Friend/small → **Zelle** · Regular/payroll → **ACH** · Large/urgent → **Wire**`,
   },
 
   {
@@ -89,37 +89,37 @@ const INTENTS: { patterns: RegExp[]; response: (ctx: string, accounts?: Account[
     patterns: [/wire\s*transfer|how.*wire|initiate.*wire|make.*wire/i],
     response: (screen) => (screen === 'payments/wire' ? "You're already here! " : '') +
       `**Wire Transfer** — For **high-value** transactions ($10,000+)\n\n` +
-      `✅ Use when: real estate, large business payments, international transfers, time-critical urgent sends\n\n` +
+      `Use when: real estate, large business payments, international transfers, time-critical urgent sends\n\n` +
       `**Steps:**\n1. Select **Domestic** or **International**\n2. Choose **From Account**\n` +
       `3. Enter **Recipient Full Name**\n4. Enter **Routing Number** (domestic) or **SWIFT code** (international)\n` +
       `5. Enter **Amount** · Fee: $25–$55\n6. Add **Memo/Purpose**\n7. Click **Send Wire Transfer**\n\n` +
-      `⚠️ Wires are **irreversible** — verify all details!\n⏰ Before **4:00 PM CT** = same-day delivery.`,
+      `Wires are **irreversible** — verify all details!\nBefore **4:00 PM CT** = same-day delivery.`,
   },
   {
     patterns: [/\bach\b|ach\s*transfer|how.*ach/i],
     response: (screen) => (screen === 'payments/ach' ? "You're here! " : '') +
       `**ACH Transfer** — For **payroll, rent, vendor & recurring** payments\n\n` +
-      `✅ Use when: paying employees, sending rent, paying recurring invoices, inter-bank transfers\n` +
-      `❌ Not for urgent same-day needs (takes 1–3 days)\n\n` +
+      `Use when: paying employees, sending rent, paying recurring invoices, inter-bank transfers\n` +
+      `Not for urgent same-day needs (takes 1–3 days)\n\n` +
       `**Steps:**\n1. Select **From Account**\n2. Enter **Recipient Name**\n` +
       `3. Enter **Routing Number** (9 digits)\n4. Enter **Account Number**\n` +
       `5. Enter **Amount**\n6. Add optional **Memo**\n7. Click **Submit ACH Transfer**\n\n` +
-      `📅 Takes **1–3 business days**. Cutoff: **3:00 PM CT**. Reversible within 2 days.`,
+      `Takes **1–3 business days**. Cutoff: **3:00 PM CT**. Reversible within 2 days.`,
   },
   {
     patterns: [/zelle|send.*via\s*zelle|how.*zelle/i],
     response: (screen) => (screen === 'payments/zelle' ? "You're here! " : '') +
       `**Zelle** — For **small person-to-person (P2P)** payments\n\n` +
-      `✅ Use when: paying a friend back, splitting bills, family transfers, small personal payments\n` +
-      `❌ Not for amounts over $2,500/day or payments to businesses you don't know\n\n` +
+      `Use when: paying a friend back, splitting bills, family transfers, small personal payments\n` +
+      `Not for amounts over $2,500/day or payments to businesses you don't know\n\n` +
       `**Steps:**\n1. Enter recipient **email or mobile number**\n` +
       `2. Enter **Amount** (max $2,500/day)\n3. Add optional **Memo**\n4. Click **Send with Zelle**\n\n` +
-      `⚡ Instant & free! ⚠️ **Cannot be reversed** — only send to people you trust.\nLimit: $2,500/day · $20,000/month.`,
+      `Instant & free! **Cannot be reversed** — only send to people you trust.\nLimit: $2,500/day · $20,000/month.`,
   },
   {
     patterns: [/card\s*pay|pay.*credit\s*card|how.*pay.*card|minimum\s*pay/i],
     response: () =>
-      `**Card Payment Steps:**\n\n1. Select your **Credit Card**\n2. Choose: **Minimum**, **Full Balance**, or **Custom Amount**\n3. Select **Source Account**\n4. Click **Make Payment**\n\n📅 Posts in **1–2 business days**.\n💡 Pay full balance to avoid interest.`,
+      `**Card Payment Steps:**\n\n1. Select your **Credit Card**\n2. Choose: **Minimum**, **Full Balance**, or **Custom Amount**\n3. Select **Source Account**\n4. Click **Make Payment**\n\nPosts in **1–2 business days**.\nPay full balance to avoid interest.`,
   },
   {
     patterns: [/balance|how\s*much|check.*balance|my\s*balance/i],
@@ -128,7 +128,7 @@ const INTENTS: { patterns: RegExp[]; response: (ctx: string, accounts?: Account[
         const checking = accounts.find(a => a.type === 'checking');
         const savings = accounts.find(a => a.type === 'savings');
         const credit = accounts.find(a => a.type === 'credit');
-        return `**Your Current Balances:**\n\n🏦 **Checking:** $${checking?.availableBalance?.toLocaleString() ?? 'N/A'} available\n💰 **Savings:** $${savings?.balance?.toLocaleString() ?? 'N/A'}\n💳 **Credit Balance:** $${credit?.balance?.toLocaleString() ?? 'N/A'}\n\nVisit **Accounts** for full details.`;
+        return `**Your Current Balances:**\n\n**Checking:** $${checking?.availableBalance?.toLocaleString() ?? 'N/A'} available\n**Savings:** $${savings?.balance?.toLocaleString() ?? 'N/A'}\n**Credit Balance:** $${credit?.balance?.toLocaleString() ?? 'N/A'}\n\nVisit **Accounts** for full details.`;
       }
       return `Your balances are on the **Dashboard** and **Accounts** page:\n- Checking (real-time)\n- Savings + interest rate\n- Credit card balance & limit\n- RD account details`;
     },
@@ -136,12 +136,12 @@ const INTENTS: { patterns: RegExp[]; response: (ctx: string, accounts?: Account[
   {
     patterns: [/\brd\b|recurring\s*deposit|fixed\s*deposit|maturity/i],
     response: () =>
-      `**Recurring Deposit (RD) Details:**\n\n- Deposit a **fixed amount monthly**\n- Tenure: **6 months – 10 years**\n- Rate: **4.5%–7.5% p.a.**\n- On maturity → credited to savings\n- Early withdrawal: **1% penalty** on interest\n\n📊 Your RD: **$1,500/month · 24 months · 6.5% p.a.**`,
+      `**Recurring Deposit (RD) Details:**\n\n- Deposit a **fixed amount monthly**\n- Tenure: **6 months – 10 years**\n- Rate: **4.5%–7.5% p.a.**\n- On maturity → credited to savings\n- Early withdrawal: **1% penalty** on interest\n\nYour RD: **$1,500/month · 24 months · 6.5% p.a.**`,
   },
   {
     patterns: [/home\s*loan|mortgage|housing\s*loan/i],
     response: () =>
-      `**Home Loan Process:**\n\n1. Go to **Loans → Apply for New Loan**\n2. Enter property details & loan amount\n3. Submit income documents\n4. Credit check (soft pull first)\n5. Loan officer contacts you in **2–3 days**\n6. Approval → Appraisal → Closing\n\n📊 Rate: **~6.75% APR** · Min. credit score: **620**`,
+      `**Home Loan Process:**\n\n1. Go to **Loans → Apply for New Loan**\n2. Enter property details & loan amount\n3. Submit income documents\n4. Credit check (soft pull first)\n5. Loan officer contacts you in **2–3 days**\n6. Approval → Appraisal → Closing\n\nRate: **~6.75% APR** · Min. credit score: **620**`,
   },
   {
     patterns: [/auto\s*loan|car\s*loan/i],
@@ -154,12 +154,12 @@ const INTENTS: { patterns: RegExp[]; response: (ctx: string, accounts?: Account[
   {
     patterns: [/card\s*detail|reward\s*point|credit\s*limit|available\s*credit|my\s*card/i],
     response: () =>
-      `**Your Credit Card (Visa ****4523):**\n\n- 💳 Limit: **$15,000**\n- 💰 Balance: **$3,245.50**\n- ✅ Available: **$11,754.50**\n- 🎁 Reward Points: **12,450 pts**\n- 📅 Min. Payment: **$65.00**\n\nFreeze/unfreeze on the **Cards** page.`,
+      `**Your Credit Card (Visa ****4523):**\n\n- Limit: **$15,000**\n- Balance: **$3,245.50**\n- Available: **$11,754.50**\n- Reward Points: **12,450 pts**\n- Min. Payment: **$65.00**\n\nFreeze/unfreeze on the **Cards** page.`,
   },
   {
     patterns: [/freeze|lock\s*card|unfreeze|block\s*card|lost\s*card|stolen/i],
     response: () =>
-      `**To Freeze/Unfreeze Card:**\n\n1. Go to **Cards** page\n2. Click the **Freeze/Unfreeze** toggle\n\n🔒 Frozen cards can't be used.\n✅ Unfreeze anytime instantly.\n📞 Lost/stolen: **1-800-285-8585**`,
+      `**To Freeze/Unfreeze Card:**\n\n1. Go to **Cards** page\n2. Click the **Freeze/Unfreeze** toggle\n\nFrozen cards can't be used.\nUnfreeze anytime instantly.\nLost/stolen: **1-800-285-8585**`,
   },
   {
     patterns: [/transaction\s*history|payment\s*history|transfer\s*history|where.*transactions?|list\s*(?:my\s*)?transactions?/i],
@@ -171,26 +171,26 @@ const INTENTS: { patterns: RegExp[]; response: (ctx: string, accounts?: Account[
   {
     patterns: [/quick\s*pay|saved\s*pay|my\s*payees?|send.*to\s+\w|pay.*\w+\s+\$\d/i],
     response: () =>
-      `**Quick Pay** lets you send money to saved payees in 2 steps — no form filling! 🚀\n\n` +
+      `**Quick Pay** lets you send money to saved payees in 2 steps — no form filling!\n\n` +
       `**Voice commands Maya understands:**\n` +
       `- _"Send $500 to Mom"_\n` +
       `- _"Pay ABC Vendors $10,000"_\n` +
       `- _"Transfer $2,200 to Metro Properties"_\n\n` +
       `**First time?** Go to **Quick Pay** in the sidebar to add a payee with their bank details. After that, one voice command does everything.\n\n` +
-      `💡 Say *"Go to Quick Pay"* to manage your saved payees.`,
+      `Say *"Go to Quick Pay"* to manage your saved payees.`,
   },
   {
     patterns: [/help|what\s*can\s*you|features/i],
     response: (screen) =>
-      `I'm **Maya** 🤖 Here's what I can do:\n\n` +
-      `⚡ **Quick Pay:** *"Send $500 to Mom"* — 11 steps → 2 voice commands\n` +
-      `💸 **Payments:** ACH · Wire · Zelle · Card\n` +
-      `💰 **Balances:** Checking · Savings · Credit · RD\n` +
-      `🏦 **Loans:** Home · Auto · Personal guidance\n` +
-      `💳 **Cards:** Details · Rewards · Freeze · Emergency\n` +
-      `🧭 **Navigate:** *"Go to Wire Transfer"*\n` +
-      `📋 **Fill forms:** *"Fill form for me"*\n\n` +
-      `📍 Currently on: **${getScreenLabel(screen)}**`,
+      `I'm **Maya** Here's what I can do:\n\n` +
+      `**Quick Pay:** *"Send $500 to Mom"* — 11 steps → 2 voice commands\n` +
+      `**Payments:** ACH · Wire · Zelle · Card\n` +
+      `**Balances:** Checking · Savings · Credit · RD\n` +
+      `**Loans:** Home · Auto · Personal guidance\n` +
+      `**Cards:** Details · Rewards · Freeze · Emergency\n` +
+      `**Navigate:** *"Go to Wire Transfer"*\n` +
+      `**Fill forms:** *"Fill form for me"*\n\n` +
+      `Currently on: **${getScreenLabel(screen)}**`,
   },
 ];
 
@@ -215,26 +215,26 @@ function recommendTransfer(amount: number | null, message: string | null): strin
   const isLarge  = amount !== null && amount >= 10000;
 
   if (isInternational || isLargeKeyword || isLarge || (isUrgent && !isP2P)) {
-    return `For this type of payment I'd recommend **Wire Transfer** 🏦\n\n` +
+    return `For this type of payment I'd recommend **Wire Transfer**\n\n` +
       `Wire is best for: high-value amounts ($10,000+), real estate, business settlements, international transfers, or urgent same-day needs.\n\n` +
       `Say *"Go to Wire Transfer"* or *"Fill form for me"* to get started!`;
   }
   if (isRecurring || isMedium) {
-    return `For this payment I'd recommend **ACH Transfer** 🔄\n\n` +
+    return `For this payment I'd recommend **ACH Transfer**\n\n` +
       `ACH is best for: payroll, rent, recurring vendor payments, or any inter-bank transfer that doesn't need to arrive same-day.\n\n` +
       `Say *"Go to ACH Transfer"* or *"Fill form for me"* to get started!`;
   }
   if (isP2P || isSmall) {
-    return `For this payment I'd recommend **Zelle** ⚡\n\n` +
+    return `For this payment I'd recommend **Zelle**\n\n` +
       `Zelle is best for: small person-to-person payments to friends, family, or individuals you know personally. Instant & free!\n\n` +
       `Say *"Go to Zelle"* or *"Fill form for me"* to get started!`;
   }
 
   // No strong signal — show comparison
   return `Here's a quick guide to pick the right method:\n\n` +
-    `⚡ **Zelle** → Small P2P payments (friends/family, up to $2,500/day) · Instant\n` +
-    `🔄 **ACH** → Payroll, rent, recurring vendor payments · 1–3 days · Free\n` +
-    `🏦 **Wire** → High-value ($10,000+), real estate, international, urgent · Same-day\n\n` +
+    `**Zelle** → Small P2P payments (friends/family, up to $2,500/day) · Instant\n` +
+    `**ACH** → Payroll, rent, recurring vendor payments · 1–3 days · Free\n` +
+    `**Wire** → High-value ($10,000+), real estate, international, urgent · Same-day\n\n` +
     `Tell me the **amount** or **who you're paying** and I can make a specific recommendation!`;
 }
 
@@ -273,7 +273,7 @@ export class LocalChatService {
       for (const nav of navIntents) {
         if (nav.patterns.some(p => p.test(normalized))) {
           return {
-            text: `Sure! Taking you to **${nav.label}** now. 🚀\n\nFeel free to ask me anything once you're there!`,
+            text: `Sure! Taking you to **${nav.label}** now.\n\nFeel free to ask me anything once you're there!`,
             navigateTo: nav.route,
           };
         }
@@ -319,7 +319,7 @@ export class LocalChatService {
     // 5. Fallback
     const label = getScreenLabel(screen);
     return {
-      text: `I'm here to help on the **${label}** screen! 😊\n\nTry asking:\n- *"Which transfer should I use?"*\n- *"I need to send $500 to a friend"*\n- *"Go to Wire Transfer"*\n- *"Fill form for me"*\n\nOr type **help** to see everything I can do.`,
+      text: `I'm here to help on the **${label}** screen!\n\nTry asking:\n- *"Which transfer should I use?"*\n- *"I need to send $500 to a friend"*\n- *"Go to Wire Transfer"*\n- *"Fill form for me"*\n\nOr type **help** to see everything I can do.`,
     };
   }
 }
