@@ -16,6 +16,7 @@ const FREEZE_TERMS: Record<string, string[]> = {
   kn: ['ಮುಚ್ಚ', 'freeze', 'block', 'lock', 'ನಿಲ್ಲಿಸ', 'ಬ್ಲಾಕ್'],
   hi: ['फ्रीज', 'ब्लॉक', 'block', 'freeze', 'lock', 'रोक', 'बंद'],
   es: ['congelar', 'bloquear', 'block', 'freeze'],
+  fr: ['geler', 'bloquer', 'freeze', 'block', 'verrouiller', 'bloquez'],
 };
 
 const UNFREEZE_TERMS: Record<string, string[]> = {
@@ -24,6 +25,7 @@ const UNFREEZE_TERMS: Record<string, string[]> = {
   kn: ['unfreeze', 'unlock', 'ತೆರ', 'ಬಿಡು'],
   hi: ['unfreeze', 'unlock', 'अनफ्रीज', 'खोल'],
   es: ['descongelar', 'desbloquear', 'unfreeze', 'unlock'],
+  fr: ['dégeler', 'débloquer', 'unfreeze', 'unlock', 'déverrouiller'],
 };
 
 const CARD_TERMS: Record<string, string[]> = {
@@ -32,6 +34,7 @@ const CARD_TERMS: Record<string, string[]> = {
   kn: ['ಕಾರ್ಡ', 'card', 'ಕಾರ್'],
   hi: ['कार्ड', 'card'],
   es: ['tarjeta', 'card'],
+  fr: ['carte', 'card', 'cartes'],
 };
 
 /** Demo customers — keys are English names used by staff card lookup. */

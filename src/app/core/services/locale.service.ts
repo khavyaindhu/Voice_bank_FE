@@ -15,6 +15,7 @@ export class LocaleService {
     { code: 'ta', label: 'Tamil',   flag: '🇮🇳', speechCode: 'ta-IN' },
     { code: 'kn', label: 'Kannada', flag: '🇮🇳', speechCode: 'kn-IN' },
     { code: 'es', label: 'Spanish', flag: '🇪🇸', speechCode: 'es-ES' },
+    { code: 'fr', label: 'French',  flag: '🇫🇷', speechCode: 'fr-FR' },
   ];
 
   readonly selected = signal<Language>(this.languages[0]);
