@@ -53,7 +53,7 @@ function includesTerm(text: string, terms: string[]): boolean {
 }
 
 function mergedTerms(map: Record<string, string[]>, langCode: string): string[] {
-  return [...(map.en ?? []), ...(map[langCode] ?? [])];
+  return [...(map['en'] ?? []), ...(map[langCode] ?? [])];
 }
 
 function detectCustomerName(text: string): string | null {
