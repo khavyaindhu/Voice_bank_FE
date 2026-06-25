@@ -1036,7 +1036,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     const isBatchReject  = /\b(reject|decline|deny)\b.*\b(ach|batch)\b|\b(ach|batch)\b.*\b(reject|decline|deny)\b/i.test(msg);
     const isAddrApprove  = /\b(approve|confirm)\b.*\baddress\b.*change|\baddress\b.*change.*\b(approve|confirm)\b/i.test(msg);
     const isAddrReject   = /\b(reject|decline|deny)\b.*\baddress\b.*change|\baddress\b.*change.*\b(reject|decline|deny)\b/i.test(msg);
-    const isPending      = /\b(pending\s*(batches?|ach)|open.*admin|show.*admin|admin\s*(panel|settings))\b/i.test(msg);
+    const isPending      = /\b(pending\s*(batches?|ach)|open.*admin|show.*admin|admin\s*(panel|settings|tab|page)|super\s*admin)\b|(take|go|navigate|bring)\s*(me\s*)?to\s*(the\s*)?(super\s*)?admin/i.test(msg);
 
     if (!isBatchApprove && !isBatchReject && !isAddrApprove && !isAddrReject && !isPending) return false;
 
