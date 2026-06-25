@@ -30,8 +30,6 @@
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 28px;
-  flex-wrap: wrap;
-  gap: 12px;
 
   h2 {
     display: flex;
@@ -56,20 +54,6 @@
   vertical-align: middle;
 }
 
-.voice-hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #EFF6FF;
-  color: #1D4ED8;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  .material-icons { font-size: 16px; }
-}
-
 // ── Section cards ─────────────────────────────────────────────────────────────
 
 .section-card {
@@ -80,8 +64,6 @@
   margin-bottom: 24px;
   padding: 20px;
 }
-
-.section-header { margin-bottom: 16px; }
 
 .section-title {
   display: flex;
@@ -104,136 +86,96 @@
   font-weight: 700;
 }
 
-// ── ACH batch table ───────────────────────────────────────────────────────────
+// ── Action-first item list ────────────────────────────────────────────────────
 
-.data-table {
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  overflow: hidden;
-  font-size: 13px;
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.dt-head {
-  display: grid;
-  grid-template-columns: 140px 90px 1fr 70px 100px 90px 180px;
-  padding: 10px 14px;
-  background: #F8FAFC;
-  font-size: 11px;
-  font-weight: 700;
-  color: #6B7280;
-  text-transform: uppercase;
-  letter-spacing: .4px;
-  border-bottom: 1px solid #E5E7EB;
-  .actions-col { text-align: right; }
-}
-
-.dt-row {
-  display: grid;
-  grid-template-columns: 140px 90px 1fr 70px 100px 90px 180px;
-  padding: 12px 14px;
+.item-row {
+  display: flex;
   align-items: center;
-  border-bottom: 1px solid #F3F4F6;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  background: #FAFAFA;
   transition: background .2s;
 
-  &:last-child { border-bottom: none; }
-  &:hover { background: #FAFAFA; }
+  &:hover { background: #F3F4F6; }
 
   &.highlighted {
     background: #ECFDF5;
+    border-color: #6EE7B7;
     animation: highlightPulse .5s ease;
   }
-  &.row-approved .ref-code { color: #065F46; }
-  &.row-rejected .ref-code { color: #B91C1C; }
+  &.row-approved {
+    background: #F0FDF4;
+    border-color: #BBF7D0;
+    .ref-code, .cust-name { color: #065F46; }
+  }
+  &.row-rejected {
+    background: #FFF1F2;
+    border-color: #FECDD3;
+    .ref-code, .cust-name { color: #B91C1C; }
+  }
 }
 
 @keyframes highlightPulse { 0% { background: #A7F3D0; } 100% { background: #ECFDF5; } }
 
-.ref-code {
-  font-family: monospace;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #0F3460;
-}
-
-.num { text-align: right; color: #374151; }
-.amount { font-weight: 600; color: #0F3460; }
-.muted { color: #6B7280; font-size: 12.5px; }
-.mono  { font-family: monospace; }
-
-// ── Address change table ──────────────────────────────────────────────────────
-
-.addr-table {
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  overflow: hidden;
-  font-size: 13px;
-}
-
-.addr-head {
-  display: grid;
-  grid-template-columns: 160px 1fr 1fr 100px 90px 180px;
-  padding: 10px 14px;
-  background: #F8FAFC;
-  font-size: 11px;
-  font-weight: 700;
-  color: #6B7280;
-  text-transform: uppercase;
-  letter-spacing: .4px;
-  border-bottom: 1px solid #E5E7EB;
-  .actions-col { text-align: right; }
-}
-
-.addr-row {
-  display: grid;
-  grid-template-columns: 160px 1fr 1fr 100px 90px 180px;
-  padding: 12px 14px;
-  align-items: center;
-  border-bottom: 1px solid #F3F4F6;
-  transition: background .2s;
-
-  &:last-child { border-bottom: none; }
-  &:hover { background: #FAFAFA; }
-
-  &.highlighted { background: #ECFDF5; animation: highlightPulse .5s ease; }
-}
-
-.cust-name { font-weight: 600; color: #0F3460; font-size: 13px; }
-.cust-id   { font-size: 11px; color: #9CA3AF; font-family: monospace; margin-top: 2px; }
-.addr-cell { font-size: 12px; color: #374151; line-height: 1.4; }
-
-// ── Status pills ──────────────────────────────────────────────────────────────
-
-.status-pill {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 11.5px;
-  font-weight: 700;
-
-  &.pill-pending  { background: #FEF3C7; color: #92400E; }
-  &.pill-approved { background: #D1FAE5; color: #065F46; }
-  &.pill-rejected { background: #FEE2E2; color: #B91C1C; }
-}
-
-// ── Row action buttons ────────────────────────────────────────────────────────
-
-.row-actions {
+// Action buttons column — LEFT side, fixed width
+.item-actions {
   display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+  width: 110px;
 }
+
+// Data column — takes remaining space
+.item-data {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.item-meta {
+  font-size: 12.5px;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.item-sub {
+  font-size: 11.5px;
+  margin-top: 4px;
+}
+
+// ── Approve / Reject buttons ──────────────────────────────────────────────────
 
 .btn-approve, .btn-reject {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   border: none;
   border-radius: 6px;
-  padding: 5px 12px;
+  padding: 6px 10px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  width: 100%;
   transition: opacity .15s;
   .material-icons { font-size: 14px; }
   &:hover { opacity: .85; }
@@ -252,11 +194,60 @@
 
 .done-label {
   font-size: 12px;
-  font-weight: 600;
-  color: #6B7280;
+  font-weight: 700;
+  text-align: center;
+  padding: 6px 0;
+
+  &.done-approved { color: #065F46; }
+  &.done-rejected { color: #B91C1C; }
 }
 
-// ── Staff users ───────────────────────────────────────────────────────────────
+// ── Shared field styles ───────────────────────────────────────────────────────
+
+.ref-code {
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F3460;
+  background: #EEF2FF;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+
+  &.pill-pending  { background: #FEF3C7; color: #92400E; }
+  &.pill-approved { background: #D1FAE5; color: #065F46; }
+  &.pill-rejected { background: #FEE2E2; color: #B91C1C; }
+}
+
+.cust-name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #0F3460;
+}
+
+.cust-id {
+  font-family: monospace;
+  font-size: 11px;
+  color: #9CA3AF;
+  background: #F3F4F6;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.addr-old   { color: #6B7280; }
+.addr-arrow { font-size: 14px; color: #9CA3AF; vertical-align: middle; }
+.addr-new   { color: #0F3460; font-weight: 500; }
+.muted      { color: #6B7280; font-size: 12.5px; }
+.mono       { font-family: monospace; }
+
+// ── Staff users table ─────────────────────────────────────────────────────────
 
 .users-table {
   border: 1px solid #E5E7EB;
@@ -360,7 +351,6 @@
   font-weight: 700;
   background: #FEE2E2;
   color: #B91C1C;
-
   &.on { background: #D1FAE5; color: #065F46; }
 }
 
@@ -380,12 +370,7 @@
   color: #0F3460;
 }
 
-.lang-chips {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
+.lang-chips { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 
 .lang-chip {
   background: #F3F4F6;
@@ -396,7 +381,7 @@
   font-weight: 700;
 }
 
-// ── Loading row ───────────────────────────────────────────────────────────────
+// ── Loading ───────────────────────────────────────────────────────────────────
 
 .loading-row {
   display: flex;

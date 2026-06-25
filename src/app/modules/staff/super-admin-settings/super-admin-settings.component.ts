@@ -97,8 +97,12 @@ export class SuperAdminSettingsComponent implements OnInit {
       }
 
       if (action === 'approve_address' || action === 'reject_address') {
+        const normalised = ref.replace(/[\s-]/g, '').toLowerCase();
         const change = ref
-          ? this.addressChanges.find(c => c.customer.toLowerCase().includes(ref.toLowerCase()))
+          ? this.addressChanges.find(c =>
+              c.customer.toLowerCase().includes(ref.toLowerCase()) ||
+              c.custId.replace(/[\s-]/g, '').toLowerCase().includes(normalised)
+            )
           : this.addressChanges.find(c => c.status === 'pending');
         if (change) {
           change.status    = action === 'approve_address' ? 'approved' : 'rejected';

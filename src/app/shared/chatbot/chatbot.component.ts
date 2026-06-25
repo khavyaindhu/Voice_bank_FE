@@ -262,9 +262,38 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private addWelcome(): void {
     const name = this.auth.currentUser()?.fullName?.split(' ')[0] ?? 'there';
     const isStaff = this.role === 'staff';
-    const greeting = isStaff
-      ? `Hi ${name}! I'm **Maya**, your U.S. Bank Staff Assistant.\n\nYou're on the **${this.screenLabel()}** screen. I can help you with:\n- FMS account & transaction lookup\n- Customer search by name or ID\n- Card freeze / dispute queries\n- ACH batch status & reports\n\nTry: _"Show Agni Test transactions for April"_ or _"Search customer Vijaya"_`
-      : `Hi ${name}! I'm **Maya**, your U.S. Bank Voice assistant.\n\nI can see you're on the **${this.screenLabel()}** screen. I'm here to help you with:\n- Transfers (ACH, Wire, Zelle)\n- Card payments & balance enquiries\n- Loan applications & EMI details\n- Account & RD information\n\nWhat can I help you with today?`;
+    const screen  = this.screenCtx.currentScreen();
+    let greeting: string;
+    if (isStaff) {
+      if (screen === 'staff/admin-settings') {
+        greeting =
+          `Hi ${name}! I'm **Maya**, your U.S. Bank Staff Assistant.\n\n` +
+          `You're on the **Super Admin Panel**. I can help you with:\n` +
+          `- "Approve ACH-2026-001" — approve a specific batch\n` +
+          `- "Reject batch" — reject the next pending batch\n` +
+          `- "Approve address change for Vijaya" — approve by customer name\n` +
+          `- "Open admin panel" — navigate here from anywhere\n\n` +
+          `_Note: These commands require Super Admin access._`;
+      } else {
+        greeting =
+          `Hi ${name}! I'm **Maya**, your U.S. Bank Staff Assistant.\n\n` +
+          `You're on the **${this.screenLabel()}** screen. I can help you with:\n` +
+          `- FMS account & transaction lookup\n` +
+          `- Customer search by name or ID\n` +
+          `- Card freeze / dispute queries\n` +
+          `- ACH batch status & reports\n\n` +
+          `Try: _"Show Agni Test transactions for April"_ or _"Search customer Vijaya"_`;
+      }
+    } else {
+      greeting =
+        `Hi ${name}! I'm **Maya**, your U.S. Bank Voice assistant.\n\n` +
+        `I can see you're on the **${this.screenLabel()}** screen. I'm here to help you with:\n` +
+        `- Transfers (ACH, Wire, Zelle)\n` +
+        `- Card payments & balance enquiries\n` +
+        `- Loan applications & EMI details\n` +
+        `- Account & RD information\n\n` +
+        `What can I help you with today?`;
+    }
     // addAssistantMessage handles translation internally
     this.addAssistantMessage(greeting);
   }
@@ -1036,9 +1065,9 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     if (isAddrApprove || isAddrReject) {
-      const custMatch = msg.match(/(?:for|customer|client)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i);
+      const custMatch = msg.match(/(?:for|customer|client)\s+([A-Za-z0-9][A-Za-z0-9\s-]*?)(?:\s*$|\s+address|\s+change)/i);
       const ref = custMatch?.[1]
-        ? custMatch[1].split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ')
+        ? custMatch[1].trim().split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ')
         : '';
       const action = isAddrApprove ? 'approve_address' : 'reject_address' as const;
       const verb   = isAddrApprove ? 'Approving' : 'Rejecting';
