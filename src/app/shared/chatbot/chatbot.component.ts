@@ -1065,10 +1065,16 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
 
     if (isAddrApprove || isAddrReject) {
-      const custMatch = msg.match(/(?:for|customer|client)\s+([A-Za-z0-9][A-Za-z0-9\s-]*?)(?:\s*$|\s+address|\s+change)/i);
-      const ref = custMatch?.[1]
-        ? custMatch[1].trim().split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ')
-        : '';
+      // Prefer a canonical CUST-NNN id extracted from spoken digits/letters;
+      // fall back to a customer name captured after "for / customer / client".
+      const canonicalId = extractSpokenCustomerId(msg);
+      const custMatch = !canonicalId
+        ? msg.match(/(?:for|customer|client)\s+([A-Za-z0-9][A-Za-z0-9\s-]*?)(?:\s*$|\s+address|\s+change)/i)
+        : null;
+      const ref = canonicalId
+        ?? (custMatch?.[1]
+          ? custMatch[1].trim().split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ')
+          : '');
       const action = isAddrApprove ? 'approve_address' : 'reject_address' as const;
       const verb   = isAddrApprove ? 'Approving' : 'Rejecting';
       this.staffCtx.setAdminAction(action, ref);
