@@ -133,7 +133,33 @@ $sidebar-collapsed-w: 64px;
     align-items: center;
     gap: 8px;
     .material-icons { font-size: 28px; }
-    .user-name { font-size: 13px; font-weight: 500; }
+  }
+
+  .user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .user-name { font-size: 13px; font-weight: 500; }
+
+  .user-role-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+
+    &.role-super {
+      background: #A78BFA;
+      color: #1E0A5C;
+    }
+    &.role-admin {
+      background: #93C5FD;
+      color: #1E3A5F;
+    }
   }
 
   .logout-btn {

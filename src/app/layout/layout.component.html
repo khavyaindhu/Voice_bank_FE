@@ -32,7 +32,14 @@
       <span class="material-icons notify-icon">notifications_none</span>
       <div class="user-menu">
         <span class="material-icons">account_circle</span>
-        <span class="user-name">{{ auth.currentUser()?.fullName }}</span>
+        <div class="user-info">
+          <span class="user-name">{{ auth.currentUser()?.fullName }}</span>
+          @if (auth.currentUser()?.role === 'super_admin') {
+            <span class="user-role-badge role-super">Super Admin</span>
+          } @else if (auth.currentUser()?.role === 'admin') {
+            <span class="user-role-badge role-admin">Admin</span>
+          }
+        </div>
         <button class="logout-btn" (click)="logout()">
           <span class="material-icons">logout</span>
         </button>
