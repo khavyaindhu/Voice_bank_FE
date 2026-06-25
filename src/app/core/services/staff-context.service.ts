@@ -50,6 +50,15 @@ export class StaffContextService {
     this.reportSection.set(section);
   }
 
+  /** Super Admin — voice-triggered action for the admin panel */
+  adminAction = signal<'approve_batch' | 'reject_batch' | 'approve_address' | 'reject_address' | ''>('');
+  adminRef    = signal('');
+
+  setAdminAction(action: 'approve_batch' | 'reject_batch' | 'approve_address' | 'reject_address' | '', ref = ''): void {
+    this.adminAction.set(action);
+    this.adminRef.set(ref);
+  }
+
   clear(): void {
     this.customerQuery.set('');
     this.fmsQuery.set('');
@@ -59,5 +68,7 @@ export class StaffContextService {
     this.reportPreset.set('');
     this.reportCustomer.set('');
     this.reportSection.set('');
+    this.adminAction.set('');
+    this.adminRef.set('');
   }
 }

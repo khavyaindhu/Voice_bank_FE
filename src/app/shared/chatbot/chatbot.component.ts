@@ -409,6 +409,9 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       return;
     }
 
+    // ── Super Admin intents (role-gated) ────────────────────────────
+    if (this.role === 'staff' && this.handleAdminIntent(commandMsg)) return;
+
     // ── Staff intents: navigate + pre-fill staff screens ────────────
     if (this.role === 'staff' && this.handleStaffIntent(commandMsg)) return;
 
@@ -992,6 +995,70 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
    * and pre-fill the search context via StaffContextService.
    * Returns true if the message was handled (caller should return early).
    */
+
+  /**
+   * Intercepts super-admin-only voice commands (ACH batch approval,
+   * address change approval). Returns true when handled.
+   * If the logged-in user is not super_admin, responds with an
+   * "not authorized" message and still returns true (consumed).
+   */
+  private handleAdminIntent(msg: string): boolean {
+    const isBatchApprove = /\b(approve|confirm|process|authorize)\b.*\b(ach|batch)\b|\b(ach|batch)\b.*\b(approve|process|authorize)\b/i.test(msg);
+    const isBatchReject  = /\b(reject|decline|deny)\b.*\b(ach|batch)\b|\b(ach|batch)\b.*\b(reject|decline|deny)\b/i.test(msg);
+    const isAddrApprove  = /\b(approve|confirm)\b.*\baddress\b.*change|\baddress\b.*change.*\b(approve|confirm)\b/i.test(msg);
+    const isAddrReject   = /\b(reject|decline|deny)\b.*\baddress\b.*change|\baddress\b.*change.*\b(reject|decline|deny)\b/i.test(msg);
+    const isPending      = /\b(pending\s*(batches?|ach)|open.*admin|show.*admin|admin\s*(panel|settings))\b/i.test(msg);
+
+    if (!isBatchApprove && !isBatchReject && !isAddrApprove && !isAddrReject && !isPending) return false;
+
+    // Role gate — admin and customer are not allowed
+    if (!this.auth.isSuperAdmin) {
+      this.addAssistantMessage(
+        'You are **not authorized** to perform this action.\n\n' +
+        '**Super Admin** access is required to approve or reject ACH batches and address change requests.\n\n' +
+        'Please contact your Super Admin to complete this operation.'
+      );
+      return true;
+    }
+
+    // Super Admin — extract reference and dispatch
+    if (isBatchApprove || isBatchReject) {
+      const refMatch = msg.match(/\b(ACH[-\s]?\d{4}[-\s]?\d{3,6})\b/i);
+      const ref = refMatch ? refMatch[0].toUpperCase().replace(/\s/g, '-') : '';
+      const action = isBatchApprove ? 'approve_batch' : 'reject_batch' as const;
+      const verb   = isBatchApprove ? 'Approving' : 'Rejecting';
+      this.staffCtx.setAdminAction(action, ref);
+      this.addAssistantMessage(
+        `${verb} ACH batch${ref ? ` **${ref}**` : ''}. Navigating to the **Admin Panel** now.`
+      );
+      setTimeout(() => this.router.navigate(['/staff/admin-settings']), 800);
+      return true;
+    }
+
+    if (isAddrApprove || isAddrReject) {
+      const custMatch = msg.match(/(?:for|customer|client)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i);
+      const ref = custMatch?.[1]
+        ? custMatch[1].split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ')
+        : '';
+      const action = isAddrApprove ? 'approve_address' : 'reject_address' as const;
+      const verb   = isAddrApprove ? 'Approving' : 'Rejecting';
+      this.staffCtx.setAdminAction(action, ref);
+      this.addAssistantMessage(
+        `${verb} address change${ref ? ` for **${ref}**` : ''}. Navigating to the **Admin Panel** now.`
+      );
+      setTimeout(() => this.router.navigate(['/staff/admin-settings']), 800);
+      return true;
+    }
+
+    if (isPending) {
+      this.addAssistantMessage('Opening **Admin Panel** — showing pending ACH batches and address change requests.');
+      setTimeout(() => this.router.navigate(['/staff/admin-settings']), 800);
+      return true;
+    }
+
+    return false;
+  }
+
   private handleStaffIntent(msg: string): boolean {
     const lower = msg.toLowerCase().trim();
     const spokenCustId = extractSpokenCustomerId(msg);

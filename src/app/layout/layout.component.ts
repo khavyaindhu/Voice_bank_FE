@@ -12,6 +12,7 @@ interface NavItem {
   icon: string;
   route: string;
   children?: { label: string; route: string }[];
+  superAdminOnly?: boolean;
 }
 
 @Component({
@@ -46,15 +47,17 @@ export class LayoutComponent implements OnInit {
   ];
 
   readonly staffNav: NavItem[] = [
-    { label: 'Staff Dashboard',   icon: 'space_dashboard',  route: '/staff/dashboard' },
-    { label: 'Customer Search',   icon: 'manage_search',    route: '/staff/customers' },
-    { label: 'FMS Accounts',      icon: 'account_tree',     route: '/staff/fms' },
-    { label: 'Card Services',     icon: 'credit_card',      route: '/staff/cards' },
-    { label: 'Reports',           icon: 'bar_chart',        route: '/staff/reports' },
+    { label: 'Staff Dashboard',   icon: 'space_dashboard',       route: '/staff/dashboard' },
+    { label: 'Customer Search',   icon: 'manage_search',         route: '/staff/customers' },
+    { label: 'FMS Accounts',      icon: 'account_tree',          route: '/staff/fms' },
+    { label: 'Card Services',     icon: 'credit_card',           route: '/staff/cards' },
+    { label: 'Reports',           icon: 'bar_chart',             route: '/staff/reports' },
+    { label: 'Super Admin',       icon: 'admin_panel_settings',  route: '/staff/admin-settings', superAdminOnly: true },
   ];
 
   get navItems(): NavItem[] {
-    return this.role() === 'staff' ? this.staffNav : this.customerNav;
+    const base = this.role() === 'staff' ? this.staffNav : this.customerNav;
+    return base.filter(item => !item.superAdminOnly || this.auth.isSuperAdmin);
   }
 
   constructor(public auth: AuthService, private router: Router) {}

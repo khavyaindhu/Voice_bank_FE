@@ -57,6 +57,7 @@
       @for (item of navItems; track item.route) {
         @if (!item.children) {
           <a class="nav-item"
+             [class.nav-super-admin]="item.superAdminOnly"
              [routerLink]="item.route"
              routerLinkActive="active"
              [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' || item.route === '/staff/dashboard' }">

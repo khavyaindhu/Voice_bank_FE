@@ -233,6 +233,16 @@ $sidebar-collapsed-w: 64px;
   .sidebar { background: #0F3460; }
   .nav-item.active { border-left-color: #38BDF8; }
   .sidebar-role-label { color: rgba(255,255,255,.5); }
+
+  // Super Admin nav item — distinct purple accent
+  .nav-item.nav-super-admin {
+    color: #C4B5FD;
+    margin-top: 8px;
+    border-top: 1px solid rgba(255,255,255,.08);
+    padding-top: 16px;
+    &.active { border-left-color: #A78BFA; color: #EDE9FE; }
+    .material-icons { color: #A78BFA; }
+  }
 }
 
 // Main content

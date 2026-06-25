@@ -1,10 +1,37 @@
 .page-wrap { padding: 0; }
 
+// ── Toast ─────────────────────────────────────────────────────────────────────
+
+.sa-toast {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #065F46;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0,0,0,.2);
+  animation: slideIn .25s ease;
+  .material-icons { font-size: 18px; }
+}
+
+@keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } }
+
+// ── Page header ───────────────────────────────────────────────────────────────
+
 .page-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 12px;
 
   h2 {
     display: flex;
@@ -18,36 +45,43 @@
   p { color: #6B7280; font-size: 13px; }
 }
 
-.access-badge {
+.sa-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #EDE9FE;
+  color: #6D28D9;
+  vertical-align: middle;
+}
+
+.voice-hint {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: #F3E8FF;
-  color: #6D28D9;
+  gap: 8px;
+  background: #EFF6FF;
+  color: #1D4ED8;
   padding: 8px 16px;
   border-radius: 20px;
-  font-size: 12.5px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
   .material-icons { font-size: 16px; }
 }
 
-.loading-state {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #6B7280;
-  font-size: 14px;
-  padding: 40px 0;
-  .material-icons { font-size: 20px; }
+// ── Section cards ─────────────────────────────────────────────────────────────
+
+.section-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #E5E7EB;
+  overflow: hidden;
+  margin-bottom: 24px;
+  padding: 20px;
 }
 
-.error-state {
-  color: #DC2626;
-  padding: 20px;
-  background: #FEF2F2;
-  border-radius: 8px;
-  font-size: 14px;
-}
+.section-header { margin-bottom: 16px; }
 
 .section-title {
   display: flex;
@@ -56,50 +90,205 @@
   font-size: 14px;
   font-weight: 700;
   color: #0F3460;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   .material-icons { font-size: 18px; color: #7C3AED; }
 }
 
-.card {
-  background: white;
+.pending-chip {
+  margin-left: 4px;
+  padding: 2px 10px;
+  background: #FEF3C7;
+  color: #92400E;
   border-radius: 12px;
-  border: 1px solid #E5E7EB;
-  overflow: hidden;
+  font-size: 11px;
+  font-weight: 700;
 }
 
-// ── Users table ───────────────────────────────────────────────────────────────
+// ── ACH batch table ───────────────────────────────────────────────────────────
+
+.data-table {
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.dt-head {
+  display: grid;
+  grid-template-columns: 140px 90px 1fr 70px 100px 90px 180px;
+  padding: 10px 14px;
+  background: #F8FAFC;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  border-bottom: 1px solid #E5E7EB;
+  .actions-col { text-align: right; }
+}
+
+.dt-row {
+  display: grid;
+  grid-template-columns: 140px 90px 1fr 70px 100px 90px 180px;
+  padding: 12px 14px;
+  align-items: center;
+  border-bottom: 1px solid #F3F4F6;
+  transition: background .2s;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: #FAFAFA; }
+
+  &.highlighted {
+    background: #ECFDF5;
+    animation: highlightPulse .5s ease;
+  }
+  &.row-approved .ref-code { color: #065F46; }
+  &.row-rejected .ref-code { color: #B91C1C; }
+}
+
+@keyframes highlightPulse { 0% { background: #A7F3D0; } 100% { background: #ECFDF5; } }
+
+.ref-code {
+  font-family: monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0F3460;
+}
+
+.num { text-align: right; color: #374151; }
+.amount { font-weight: 600; color: #0F3460; }
+.muted { color: #6B7280; font-size: 12.5px; }
+.mono  { font-family: monospace; }
+
+// ── Address change table ──────────────────────────────────────────────────────
+
+.addr-table {
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.addr-head {
+  display: grid;
+  grid-template-columns: 160px 1fr 1fr 100px 90px 180px;
+  padding: 10px 14px;
+  background: #F8FAFC;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  border-bottom: 1px solid #E5E7EB;
+  .actions-col { text-align: right; }
+}
+
+.addr-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 1fr 100px 90px 180px;
+  padding: 12px 14px;
+  align-items: center;
+  border-bottom: 1px solid #F3F4F6;
+  transition: background .2s;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: #FAFAFA; }
+
+  &.highlighted { background: #ECFDF5; animation: highlightPulse .5s ease; }
+}
+
+.cust-name { font-weight: 600; color: #0F3460; font-size: 13px; }
+.cust-id   { font-size: 11px; color: #9CA3AF; font-family: monospace; margin-top: 2px; }
+.addr-cell { font-size: 12px; color: #374151; line-height: 1.4; }
+
+// ── Status pills ──────────────────────────────────────────────────────────────
+
+.status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+
+  &.pill-pending  { background: #FEF3C7; color: #92400E; }
+  &.pill-approved { background: #D1FAE5; color: #065F46; }
+  &.pill-rejected { background: #FEE2E2; color: #B91C1C; }
+}
+
+// ── Row action buttons ────────────────────────────────────────────────────────
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.btn-approve, .btn-reject {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+  .material-icons { font-size: 14px; }
+  &:hover { opacity: .85; }
+}
+
+.btn-approve {
+  background: #065F46;
+  color: white;
+}
+
+.btn-reject {
+  background: #FEE2E2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+}
+
+.done-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+}
+
+// ── Staff users ───────────────────────────────────────────────────────────────
 
 .users-table {
-  width: 100%;
-  border-collapse: collapse;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  overflow: hidden;
   font-size: 13.5px;
-
-  thead tr {
-    background: #F8FAFC;
-    border-bottom: 1px solid #E5E7EB;
-  }
-
-  th {
-    padding: 10px 16px;
-    text-align: left;
-    font-size: 11px;
-    font-weight: 700;
-    color: #6B7280;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-  }
-
-  td {
-    padding: 12px 16px;
-    border-bottom: 1px solid #F3F4F6;
-    vertical-align: middle;
-  }
-
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: #FAFAFA; }
 }
 
-.name-cell {
+.ut-head {
+  display: grid;
+  grid-template-columns: 1fr 120px 1fr 120px 140px;
+  padding: 10px 14px;
+  background: #F8FAFC;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.ut-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 1fr 120px 140px;
+  padding: 12px 14px;
+  align-items: center;
+  border-bottom: 1px solid #F3F4F6;
+  &:last-child { border-bottom: none; }
+  &:hover { background: #FAFAFA; }
+}
+
+.user-avatar-name {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -121,9 +310,6 @@
   flex-shrink: 0;
 }
 
-.mono  { font-family: monospace; color: #374151; }
-.muted { color: #6B7280; font-size: 12.5px; }
-
 .role-badge {
   display: inline-block;
   padding: 3px 10px;
@@ -131,22 +317,19 @@
   font-size: 11.5px;
   font-weight: 700;
 
-  &.badge-super {
-    background: #EDE9FE;
-    color: #6D28D9;
-  }
-  &.badge-admin {
-    background: #DBEAFE;
-    color: #1D4ED8;
-  }
+  &.badge-super { background: #EDE9FE; color: #6D28D9; }
+  &.badge-admin { background: #DBEAFE; color: #1D4ED8; }
 }
 
-// ── System config grid ────────────────────────────────────────────────────────
+// ── System config ─────────────────────────────────────────────────────────────
 
 .config-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .config-item {
@@ -155,19 +338,19 @@
   justify-content: space-between;
   padding: 14px 20px;
   border-bottom: 1px solid #F3F4F6;
+  gap: 12px;
 
   &:nth-child(odd)  { border-right: 1px solid #F3F4F6; }
-  &:last-child, &:nth-last-child(2):nth-child(odd) { border-bottom: none; }
+  &:nth-last-child(-n+2) { border-bottom: none; }
+
+  &.lang-item { align-items: flex-start; }
 }
 
 .config-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   font-size: 13px;
   font-weight: 600;
   color: #374151;
-  .material-icons { font-size: 17px; color: #9CA3AF; }
+  flex-shrink: 0;
 }
 
 .toggle-pill {
@@ -178,17 +361,7 @@
   background: #FEE2E2;
   color: #B91C1C;
 
-  &.on {
-    background: #D1FAE5;
-    color: #065F46;
-  }
-}
-
-.config-value {
-  font-size: 13px;
-  font-weight: 600;
-  color: #0F3460;
-  font-family: monospace;
+  &.on { background: #D1FAE5; color: #065F46; }
 }
 
 .env-badge {
@@ -198,6 +371,13 @@
   font-weight: 700;
   background: #FEF3C7;
   color: #92400E;
+}
+
+.version-txt {
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F3460;
 }
 
 .lang-chips {
@@ -216,18 +396,16 @@
   font-weight: 700;
 }
 
-// ── Audit placeholder ─────────────────────────────────────────────────────────
+// ── Loading row ───────────────────────────────────────────────────────────────
 
-.audit-placeholder {
+.loading-row {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 36px;
-  text-align: center;
+  gap: 10px;
   color: #6B7280;
-
-  .material-icons { font-size: 40px; color: #D1D5DB; margin-bottom: 12px; }
-  p { margin: 2px 0; font-size: 13.5px; }
+  font-size: 14px;
+  padding: 24px 0;
+  .material-icons { font-size: 20px; }
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
