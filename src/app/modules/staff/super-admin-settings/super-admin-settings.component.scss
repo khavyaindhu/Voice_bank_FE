@@ -26,9 +26,6 @@
 // ── Page header ───────────────────────────────────────────────────────────────
 
 .page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
   margin-bottom: 28px;
 
   h2 {
@@ -86,99 +83,218 @@
   font-weight: 700;
 }
 
-// ── Action-first item list ────────────────────────────────────────────────────
+// ── Shared card pieces ────────────────────────────────────────────────────────
 
-.items-list {
+.card-header {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
   gap: 8px;
 }
 
-.item-row {
+.card-footer {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
+  gap: 8px;
+  padding-top: 12px;
+  margin-top: 12px;
+  border-top: 1px solid #F3F4F6;
+}
+
+// ── ACH batch cards grid ──────────────────────────────────────────────────────
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.item-card {
   border: 1px solid #E5E7EB;
   border-radius: 10px;
+  padding: 14px 16px;
   background: #FAFAFA;
-  transition: background .2s;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow .15s;
 
-  &:hover { background: #F3F4F6; }
+  &:hover { box-shadow: 0 2px 10px rgba(0,0,0,.08); }
 
   &.highlighted {
     background: #ECFDF5;
     border-color: #6EE7B7;
     animation: highlightPulse .5s ease;
   }
-  &.row-approved {
-    background: #F0FDF4;
-    border-color: #BBF7D0;
-    .ref-code, .cust-name { color: #065F46; }
-  }
-  &.row-rejected {
-    background: #FFF1F2;
-    border-color: #FECDD3;
-    .ref-code, .cust-name { color: #B91C1C; }
-  }
+  &.card-approved { background: #F0FDF4; border-color: #BBF7D0; }
+  &.card-rejected { background: #FFF1F2; border-color: #FECDD3; }
+}
+
+.ref-code {
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #4338CA;
+  background: #EEF2FF;
+  padding: 3px 10px;
+  border-radius: 6px;
+  letter-spacing: .3px;
+}
+
+.card-body { flex: 1; }
+
+.company-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 12.5px;
+  color: #6B7280;
+}
+
+.meta-dot { color: #D1D5DB; }
+
+.amount {
+  font-weight: 700;
+  color: #0F3460;
+  font-size: 13px;
 }
 
 @keyframes highlightPulse { 0% { background: #A7F3D0; } 100% { background: #ECFDF5; } }
 
-// Action buttons column — LEFT side, fixed width
-.item-actions {
+// ── Address change list ───────────────────────────────────────────────────────
+
+.addr-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  flex-shrink: 0;
-  width: 110px;
+  gap: 12px;
 }
 
-// Data column — takes remaining space
-.item-data {
-  flex: 1;
-  min-width: 0;
+.addr-card {
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: #FAFAFA;
+  transition: box-shadow .15s;
+
+  &:hover { box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+
+  &.highlighted { background: #ECFDF5; border-color: #6EE7B7; animation: highlightPulse .5s ease; }
+  &.card-approved { background: #F0FDF4; border-color: #BBF7D0; }
+  &.card-rejected { background: #FFF1F2; border-color: #FECDD3; }
 }
 
-.item-top {
+// Customer identity row — name + prominent ID badge
+.cust-identity {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 4px;
   flex-wrap: wrap;
 }
 
-.item-meta {
+.cust-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+// Large, high-contrast cust ID so it's easy to read during voice demo
+.cust-id-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #1D4ED8;
+  color: white;
+  font-family: monospace;
   font-size: 12.5px;
-  color: #374151;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  letter-spacing: .5px;
+}
+
+// Address info block
+.addr-body { margin-bottom: 4px; }
+
+.addr-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12.5px;
+}
+
+.addr-icon {
+  font-size: 15px;
+  color: #9CA3AF;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.new-icon { color: #059669; }
+
+.addr-old { color: #6B7280; }
+
+.addr-new {
+  color: #0F3460;
+  font-weight: 500;
+}
+
+.addr-arrow-row {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
+  padding: 2px 0 2px 3px;
 }
 
-.item-sub {
+.arrow-icon {
+  font-size: 14px;
+  color: #D1D5DB;
+}
+
+.addr-req {
   font-size: 11.5px;
-  margin-top: 4px;
+  color: #9CA3AF;
+  margin-top: 6px;
 }
 
-// ── Approve / Reject buttons ──────────────────────────────────────────────────
+// ── Status pills ──────────────────────────────────────────────────────────────
+
+.status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &.pill-pending  { background: #FEF3C7; color: #92400E; }
+  &.pill-approved { background: #D1FAE5; color: #065F46; }
+  &.pill-rejected { background: #FEE2E2; color: #B91C1C; }
+}
+
+// ── Action buttons ────────────────────────────────────────────────────────────
 
 .btn-approve, .btn-reject {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 5px;
   border: none;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 12px;
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  width: 100%;
-  transition: opacity .15s;
-  .material-icons { font-size: 14px; }
-  &:hover { opacity: .85; }
+  transition: opacity .15s, transform .1s;
+  .material-icons { font-size: 15px; }
+  &:hover  { opacity: .88; }
+  &:active { transform: scale(.97); }
 }
 
 .btn-approve {
@@ -193,59 +309,15 @@
 }
 
 .done-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  text-align: center;
   padding: 6px 0;
+  width: 100%;
+  text-align: center;
 
   &.done-approved { color: #065F46; }
   &.done-rejected { color: #B91C1C; }
 }
-
-// ── Shared field styles ───────────────────────────────────────────────────────
-
-.ref-code {
-  font-family: monospace;
-  font-size: 13px;
-  font-weight: 700;
-  color: #0F3460;
-  background: #EEF2FF;
-  padding: 2px 8px;
-  border-radius: 6px;
-}
-
-.status-pill {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 11.5px;
-  font-weight: 700;
-
-  &.pill-pending  { background: #FEF3C7; color: #92400E; }
-  &.pill-approved { background: #D1FAE5; color: #065F46; }
-  &.pill-rejected { background: #FEE2E2; color: #B91C1C; }
-}
-
-.cust-name {
-  font-weight: 700;
-  font-size: 13.5px;
-  color: #0F3460;
-}
-
-.cust-id {
-  font-family: monospace;
-  font-size: 11px;
-  color: #9CA3AF;
-  background: #F3F4F6;
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-
-.addr-old   { color: #6B7280; }
-.addr-arrow { font-size: 14px; color: #9CA3AF; vertical-align: middle; }
-.addr-new   { color: #0F3460; font-weight: 500; }
-.muted      { color: #6B7280; font-size: 12.5px; }
-.mono       { font-family: monospace; }
 
 // ── Staff users table ─────────────────────────────────────────────────────────
 
@@ -307,17 +379,18 @@
   border-radius: 12px;
   font-size: 11.5px;
   font-weight: 700;
-
   &.badge-super { background: #EDE9FE; color: #6D28D9; }
   &.badge-admin { background: #DBEAFE; color: #1D4ED8; }
 }
+
+.mono  { font-family: monospace; color: #374151; }
+.muted { color: #6B7280; font-size: 12.5px; }
 
 // ── System config ─────────────────────────────────────────────────────────────
 
 .config-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0;
   border: 1px solid #E5E7EB;
   border-radius: 8px;
   overflow: hidden;
@@ -331,9 +404,8 @@
   border-bottom: 1px solid #F3F4F6;
   gap: 12px;
 
-  &:nth-child(odd)  { border-right: 1px solid #F3F4F6; }
+  &:nth-child(odd)    { border-right: 1px solid #F3F4F6; }
   &:nth-last-child(-n+2) { border-bottom: none; }
-
   &.lang-item { align-items: flex-start; }
 }
 

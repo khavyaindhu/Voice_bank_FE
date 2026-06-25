@@ -30,43 +30,45 @@
       }
     </div>
 
-    <div class="items-list">
+    <div class="cards-grid">
       @for (b of batches; track b.ref) {
-        <div class="item-row"
+        <div class="item-card"
              [class.highlighted]="b.highlight"
-             [class.row-approved]="b.status === 'approved'"
-             [class.row-rejected]="b.status === 'rejected'">
+             [class.card-approved]="b.status === 'approved'"
+             [class.card-rejected]="b.status === 'rejected'">
 
-          <!-- Actions FIRST so they're never hidden by chatbot -->
-          <div class="item-actions">
+          <!-- Top: ref + status -->
+          <div class="card-header">
+            <span class="ref-code">{{ b.ref }}</span>
+            <span class="status-pill" [class]="'pill-' + b.status">{{ b.status | titlecase }}</span>
+          </div>
+
+          <!-- Middle: details -->
+          <div class="card-body">
+            <div class="company-name">{{ b.company }}</div>
+            <div class="card-meta">
+              <span>{{ b.date }}</span>
+              <span class="meta-dot">·</span>
+              <span>{{ b.entries }} entries</span>
+              <span class="meta-dot">·</span>
+              <span class="amount">${{ b.amount | number }}</span>
+            </div>
+          </div>
+
+          <!-- Bottom: actions -->
+          <div class="card-footer">
             @if (b.status === 'pending') {
               <button class="btn-approve" (click)="approveBatch(b)">
-                <span class="material-icons">check</span>
-                <span>Approve</span>
+                <span class="material-icons">check</span> Approve
               </button>
               <button class="btn-reject" (click)="rejectBatch(b)">
-                <span class="material-icons">close</span>
-                <span>Reject</span>
+                <span class="material-icons">close</span> Reject
               </button>
             } @else {
-              <span class="done-label" [class.done-approved]="b.status === 'approved'"
-                    [class.done-rejected]="b.status === 'rejected'">
+              <span class="done-label" [class.done-approved]="b.status === 'approved'" [class.done-rejected]="b.status === 'rejected'">
                 {{ b.status === 'approved' ? '✓ Approved' : '✗ Rejected' }}
               </span>
             }
-          </div>
-
-          <!-- Data -->
-          <div class="item-data">
-            <div class="item-top">
-              <span class="ref-code">{{ b.ref }}</span>
-              <span class="status-pill" [class]="'pill-' + b.status">{{ b.status | titlecase }}</span>
-            </div>
-            <div class="item-meta">
-              {{ b.company }} &nbsp;·&nbsp; {{ b.date }} &nbsp;·&nbsp;
-              {{ b.entries }} entries &nbsp;·&nbsp;
-              <strong>${{ b.amount | number }}</strong>
-            </div>
           </div>
 
         </div>
@@ -84,45 +86,52 @@
       }
     </div>
 
-    <div class="items-list">
+    <div class="addr-list">
       @for (c of addressChanges; track c.id) {
-        <div class="item-row"
+        <div class="addr-card"
              [class.highlighted]="c.highlight"
-             [class.row-approved]="c.status === 'approved'"
-             [class.row-rejected]="c.status === 'rejected'">
+             [class.card-approved]="c.status === 'approved'"
+             [class.card-rejected]="c.status === 'rejected'">
 
-          <!-- Actions FIRST -->
-          <div class="item-actions">
+          <!-- Top: customer name + ID badge + status -->
+          <div class="card-header">
+            <div class="cust-identity">
+              <span class="cust-name">{{ c.customer }}</span>
+              <span class="cust-id-badge">{{ c.custId }}</span>
+            </div>
+            <span class="status-pill" [class]="'pill-' + c.status">{{ c.status | titlecase }}</span>
+          </div>
+
+          <!-- Middle: address info -->
+          <div class="addr-body">
+            <div class="addr-line">
+              <span class="material-icons addr-icon">location_on</span>
+              <span class="addr-old">{{ c.oldAddress }}</span>
+            </div>
+            <div class="addr-arrow-row">
+              <span class="material-icons arrow-icon">arrow_downward</span>
+            </div>
+            <div class="addr-line">
+              <span class="material-icons addr-icon new-icon">location_on</span>
+              <span class="addr-new">{{ c.newAddress }}</span>
+            </div>
+            <div class="addr-req">Requested {{ c.requested }}</div>
+          </div>
+
+          <!-- Bottom: actions -->
+          <div class="card-footer">
             @if (c.status === 'pending') {
               <button class="btn-approve" (click)="approveAddress(c)">
-                <span class="material-icons">check</span>
-                <span>Approve</span>
+                <span class="material-icons">check</span> Approve
               </button>
               <button class="btn-reject" (click)="rejectAddress(c)">
-                <span class="material-icons">close</span>
-                <span>Reject</span>
+                <span class="material-icons">close</span> Reject
               </button>
             } @else {
-              <span class="done-label" [class.done-approved]="c.status === 'approved'"
-                    [class.done-rejected]="c.status === 'rejected'">
+              <span class="done-label" [class.done-approved]="c.status === 'approved'" [class.done-rejected]="c.status === 'rejected'">
                 {{ c.status === 'approved' ? '✓ Approved' : '✗ Rejected' }}
               </span>
             }
-          </div>
-
-          <!-- Data -->
-          <div class="item-data">
-            <div class="item-top">
-              <span class="cust-name">{{ c.customer }}</span>
-              <span class="cust-id">{{ c.custId }}</span>
-              <span class="status-pill" [class]="'pill-' + c.status">{{ c.status | titlecase }}</span>
-            </div>
-            <div class="item-meta">
-              <span class="addr-old muted">{{ c.oldAddress }}</span>
-              <span class="addr-arrow material-icons">arrow_forward</span>
-              <span class="addr-new">{{ c.newAddress }}</span>
-            </div>
-            <div class="item-sub muted">Requested {{ c.requested }}</div>
           </div>
 
         </div>
@@ -159,9 +168,7 @@
             <span class="mono">{{ u.username }}</span>
             <span class="muted">{{ u.email }}</span>
             <span>
-              <span class="role-badge" [class]="roleBadgeClass(u.role)">
-                {{ roleLabel(u.role) }}
-              </span>
+              <span class="role-badge" [class]="roleBadgeClass(u.role)">{{ roleLabel(u.role) }}</span>
             </span>
             <span class="muted">{{ u.lastLogin || 'N/A' }}</span>
           </div>
