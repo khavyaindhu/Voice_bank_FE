@@ -1125,7 +1125,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       return;
     }
 
-    const warningLines = preview.warnings.map(w => `⚠️ ${w}`).join('\n');
+    const warningLines = preview.warnings.map(w => `⚠️ ${w}`).join('\n\n');
     this.addAssistantMessage(
       `${header}\n\n` +
       `Before I approve, a couple of things to confirm:\n\n` +
