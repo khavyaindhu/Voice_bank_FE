@@ -15,6 +15,15 @@ interface AchBatch {
   highlight?: boolean;
 }
 
+interface BatchEntry {
+  payee:      string;
+  account:    string;
+  amount:     number;
+  type:       'credit' | 'debit';
+  isFlagged?: boolean;
+  isNew?:     boolean;
+}
+
 interface AddressChange {
   id: string;
   customer: string;
@@ -44,14 +53,16 @@ interface SystemConfig {
   styleUrl: './super-admin-settings.component.scss',
 })
 export class SuperAdminSettingsComponent implements OnInit {
-  private http   = inject(HttpClient);
-  auth           = inject(AuthService);
-  private staffCtx = inject(StaffContextService);
+  private http      = inject(HttpClient);
+  auth              = inject(AuthService);
+  private staffCtx  = inject(StaffContextService);
 
-  staffUsers: StaffUser[]        = [];
+  staffUsers: StaffUser[]           = [];
   systemConfig: SystemConfig | null = null;
-  apiLoading = true;
-  toastMsg   = '';
+  apiLoading  = true;
+  toastMsg    = '';
+
+  selectedBatch: AchBatch | null = null;
 
   batches: AchBatch[] = [
     { ref: 'ACH-2026-001', date: '2026-06-20', amount: 142350, entries: 48, company: 'Metro Payroll Group',   status: 'pending' },
@@ -59,6 +70,73 @@ export class SuperAdminSettingsComponent implements OnInit {
     { ref: 'ACH-2026-003', date: '2026-06-22', amount: 215750, entries: 67, company: 'TechServe Corp',        status: 'pending' },
     { ref: 'ACH-2026-004', date: '2026-06-23', amount:  52100, entries: 19, company: 'Sunrise Vendors LLC',   status: 'pending' },
   ];
+
+  private batchEntriesMap: Record<string, BatchEntry[]> = {
+    'ACH-2026-001': [
+      { payee: 'Regional Staffing Partners', account: '****4821', amount: 28500,  type: 'credit', isFlagged: true },
+      { payee: 'John H. Smith',              account: '****1102', amount:  2800,   type: 'credit' },
+      { payee: 'Jane L. Doe',               account: '****3347', amount:  3100,   type: 'credit' },
+      { payee: 'Robert A. Johnson',         account: '****9201', amount:  2950,   type: 'credit' },
+      { payee: 'Alice M. Brown',            account: '****6678', amount:  3200,   type: 'credit' },
+      { payee: 'Carlos Rivera',             account: '****5512', amount:  2780,   type: 'credit' },
+    ],
+    'ACH-2026-002': [
+      { payee: 'Electric Services — District 1', account: '****2201', amount: 12400, type: 'credit' },
+      { payee: 'Water Services — Zone A',        account: '****4490', amount: 18200, type: 'credit' },
+      { payee: 'Gas Distribution — Sector 3',   account: '****7731', amount: 22100, type: 'credit' },
+      { payee: 'Maintenance Services LLC',      account: '****8844', amount:  8900, type: 'credit' },
+      { payee: 'Equipment Rental Corp',         account: '****3318', amount: 15600, type: 'credit' },
+      { payee: 'City Works Contractors',        account: '****6629', amount: 12000, type: 'credit' },
+    ],
+    'ACH-2026-003': [
+      { payee: 'Digital Infrastructure LLC', account: '****9910', amount: 47800, type: 'credit', isFlagged: true },
+      { payee: 'Software Licensing — Vendor A', account: '****1123', amount: 4200,  type: 'credit' },
+      { payee: 'IT Support Services',          account: '****4456', amount: 3800,  type: 'credit' },
+      { payee: 'Cloud Services Provider',      account: '****7789', amount: 3500,  type: 'credit' },
+      { payee: 'Network Solutions Inc',        account: '****2234', amount: 4100,  type: 'credit' },
+      { payee: 'Cybersecurity Partners',       account: '****5567', amount: 3600,  type: 'credit' },
+    ],
+    'ACH-2026-004': [
+      { payee: 'Falcon Enterprises',      account: '****3301', amount: 5200, type: 'credit', isNew: true, isFlagged: true },
+      { payee: 'Office Supplies Co',      account: '****6612', amount: 2800, type: 'credit' },
+      { payee: 'Sunrise Materials Inc',   account: '****9923', amount: 3100, type: 'credit' },
+      { payee: 'General Vendors Group',   account: '****2234', amount: 4400, type: 'credit' },
+      { payee: 'Eastern Logistics LLC',   account: '****5545', amount: 3900, type: 'credit' },
+      { payee: 'Partner Distributors',    account: '****8856', amount: 2700, type: 'credit' },
+    ],
+  };
+
+  private batchWarningsMap: Record<string, string[]> = {
+    'ACH-2026-001': [
+      'Entry to Regional Staffing Partners is $28,500 — about 9.6x the batch average of $2,966.',
+      'Effective date (2026-06-20) has already passed. Approving now may result in same-day settlement.',
+    ],
+    'ACH-2026-002': [],
+    'ACH-2026-003': [
+      'Entry to Digital Infrastructure LLC is $47,800 — about 14.8x the batch average of $3,220.',
+      'This is the largest batch ever submitted by TechServe Corp. Previous maximum was $180,000.',
+    ],
+    'ACH-2026-004': [
+      'Effective date (2026-06-23) has already passed.',
+      'Falcon Enterprises is a new payee appearing in this batch for the first time.',
+    ],
+  };
+
+  get selectedBatchEntries(): BatchEntry[] {
+    return this.selectedBatch ? (this.batchEntriesMap[this.selectedBatch.ref] ?? []) : [];
+  }
+
+  get selectedBatchWarnings(): string[] {
+    return this.selectedBatch ? (this.batchWarningsMap[this.selectedBatch.ref] ?? []) : [];
+  }
+
+  get selectedBatchExtraCount(): number {
+    if (!this.selectedBatch) return 0;
+    return Math.max(0, this.selectedBatch.entries - this.selectedBatchEntries.length);
+  }
+
+  selectBatch(b: AchBatch): void  { this.selectedBatch = b; }
+  closeDetail(): void             { this.selectedBatch = null; }
 
   addressChanges: AddressChange[] = [
     { id: 'ADR-001', customer: 'Vijaya Krishnamurthy', custId: 'CUST-001',
@@ -76,7 +154,6 @@ export class SuperAdminSettingsComponent implements OnInit {
   ];
 
   constructor() {
-    // Watch for voice-triggered admin actions from the chatbot
     effect(() => {
       const action = this.staffCtx.adminAction();
       const ref    = this.staffCtx.adminRef();
@@ -89,6 +166,7 @@ export class SuperAdminSettingsComponent implements OnInit {
         if (batch) {
           batch.status    = action === 'approve_batch' ? 'approved' : 'rejected';
           batch.highlight = true;
+          if (this.selectedBatch?.ref === batch.ref) this.selectedBatch = { ...batch };
           this.showToast(action === 'approve_batch'
             ? `ACH batch ${batch.ref} approved successfully.`
             : `ACH batch ${batch.ref} rejected.`);
@@ -114,7 +192,6 @@ export class SuperAdminSettingsComponent implements OnInit {
         }
       }
 
-      // Clear signal after processing
       setTimeout(() => this.staffCtx.setAdminAction(''), 100);
     });
   }
@@ -129,15 +206,17 @@ export class SuperAdminSettingsComponent implements OnInit {
   }
 
   approveBatch(batch: AchBatch): void {
-    batch.status = 'approved';
+    batch.status    = 'approved';
     batch.highlight = true;
+    if (this.selectedBatch?.ref === batch.ref) this.selectedBatch = { ...batch };
     this.showToast(`ACH batch ${batch.ref} approved.`);
     setTimeout(() => { batch.highlight = false; }, 3000);
   }
 
   rejectBatch(batch: AchBatch): void {
-    batch.status = 'rejected';
+    batch.status    = 'rejected';
     batch.highlight = true;
+    if (this.selectedBatch?.ref === batch.ref) this.selectedBatch = { ...batch };
     this.showToast(`ACH batch ${batch.ref} rejected.`);
     setTimeout(() => { batch.highlight = false; }, 3000);
   }
@@ -163,6 +242,6 @@ export class SuperAdminSettingsComponent implements OnInit {
 
   roleLabel(role: string):      string { return role === 'super_admin' ? 'Super Admin' : 'Admin'; }
   roleBadgeClass(role: string): string { return role === 'super_admin' ? 'badge-super' : 'badge-admin'; }
-  get pendingBatches():  number { return this.batches.filter(b => b.status === 'pending').length; }
-  get pendingAddress():  number { return this.addressChanges.filter(c => c.status === 'pending').length; }
+  get pendingBatches(): number { return this.batches.filter(b => b.status === 'pending').length; }
+  get pendingAddress(): number { return this.addressChanges.filter(c => c.status === 'pending').length; }
 }

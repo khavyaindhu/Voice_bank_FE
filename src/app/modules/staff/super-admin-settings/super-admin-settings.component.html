@@ -35,7 +35,11 @@
         <div class="item-card"
              [class.highlighted]="b.highlight"
              [class.card-approved]="b.status === 'approved'"
-             [class.card-rejected]="b.status === 'rejected'">
+             [class.card-rejected]="b.status === 'rejected'"
+             [class.card-selected]="selectedBatch?.ref === b.ref"
+             (click)="selectBatch(b)"
+             role="button"
+             tabindex="0">
 
           <!-- Top: ref + status -->
           <div class="card-header">
@@ -224,3 +228,105 @@
   }
 
 </div>
+
+<!-- ── BATCH DETAIL DRAWER ───────────────────────────────────── -->
+@if (selectedBatch) {
+  <div class="drawer-backdrop" (click)="closeDetail()"></div>
+
+  <div class="batch-drawer">
+
+    <!-- Drawer header -->
+    <div class="drawer-header">
+      <div class="drawer-title-row">
+        <span class="ref-code">{{ selectedBatch.ref }}</span>
+        <span class="status-pill" [class]="'pill-' + selectedBatch.status">
+          {{ selectedBatch.status | titlecase }}
+        </span>
+      </div>
+      <div class="drawer-company">{{ selectedBatch.company }}</div>
+      <button class="drawer-close" (click)="closeDetail()">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    <!-- Summary row -->
+    <div class="drawer-summary">
+      <div class="summary-item">
+        <span class="summary-label">Total Amount</span>
+        <span class="summary-value amount">${{ selectedBatch.amount | number }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Entries</span>
+        <span class="summary-value">{{ selectedBatch.entries }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Effective Date</span>
+        <span class="summary-value">{{ selectedBatch.date }}</span>
+      </div>
+    </div>
+
+    <!-- Anomaly warnings -->
+    @if (selectedBatchWarnings.length > 0) {
+      <div class="drawer-warnings">
+        <div class="warnings-title">
+          <span class="material-icons">warning_amber</span>
+          Anomaly Flags
+        </div>
+        @for (w of selectedBatchWarnings; track w) {
+          <div class="warning-item">
+            <span class="material-icons warn-icon">error_outline</span>
+            <span>{{ w }}</span>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="drawer-clean">
+        <span class="material-icons">verified</span>
+        No anomalies detected — batch looks clean.
+      </div>
+    }
+
+    <!-- Entries table -->
+    <div class="drawer-section-label">ACH Entries (showing {{ selectedBatchEntries.length }} of {{ selectedBatch.entries }})</div>
+    <div class="entries-table">
+      <div class="et-head">
+        <span>Payee</span>
+        <span>Account</span>
+        <span>Type</span>
+        <span class="text-right">Amount</span>
+      </div>
+      @for (e of selectedBatchEntries; track e.account) {
+        <div class="et-row" [class.et-flagged]="e.isFlagged">
+          <div class="et-payee">
+            {{ e.payee }}
+            @if (e.isNew) { <span class="new-badge">NEW</span> }
+            @if (e.isFlagged) { <span class="flag-icon material-icons">flag</span> }
+          </div>
+          <span class="mono">{{ e.account }}</span>
+          <span class="type-pill type-{{ e.type }}">{{ e.type | titlecase }}</span>
+          <span class="et-amount" [class.flagged-amount]="e.isFlagged">${{ e.amount | number }}</span>
+        </div>
+      }
+      @if (selectedBatchExtraCount > 0) {
+        <div class="et-more">+ {{ selectedBatchExtraCount }} more entries</div>
+      }
+    </div>
+
+    <!-- Drawer actions -->
+    @if (selectedBatch.status === 'pending') {
+      <div class="drawer-actions">
+        <button class="btn-approve" (click)="approveBatch(selectedBatch); closeDetail()">
+          <span class="material-icons">check</span> Approve Batch
+        </button>
+        <button class="btn-reject" (click)="rejectBatch(selectedBatch); closeDetail()">
+          <span class="material-icons">close</span> Reject Batch
+        </button>
+      </div>
+    } @else {
+      <div class="drawer-done-label" [class.done-approved]="selectedBatch.status === 'approved'" [class.done-rejected]="selectedBatch.status === 'rejected'">
+        {{ selectedBatch.status === 'approved' ? '✓ Batch Approved' : '✗ Batch Rejected' }}
+      </div>
+    }
+
+  </div>
+}
