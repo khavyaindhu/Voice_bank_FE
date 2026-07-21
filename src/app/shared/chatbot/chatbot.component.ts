@@ -54,6 +54,16 @@ export interface ChatMessage {
   };
 }
 
+/** Snapshot of an ACH batch used by the pre-approval warning flow */
+interface AchBatchAnomalyPreview {
+  ref:         string;
+  company:     string;
+  entries:     number;
+  totalAmount: number;
+  /** Plain-English warning strings shown to the officer before they confirm */
+  warnings:    string[];
+}
+
 /** One of the three emergency card actions */
 export interface EmergencyAction {
   id:          'freeze' | 'dispute' | 'replacement';
@@ -102,6 +112,10 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   private flowSteps: FlowStep[] = [];
   private flowStepIndex = 0;
   private flowFilledFields: Record<string, string | boolean> = {};
+
+  // ── ACH Pre-Approval Warning flow state ─────────────────────────
+  /** Set while the officer is being shown anomaly warnings before confirmation */
+  achApprovalPending = signal<AchBatchAnomalyPreview | null>(null);
 
   // ── Emergency Card Response flow state ──────────────────────────
   emergencyFlowActive  = signal(false);
@@ -437,6 +451,9 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.startEmergencyCardFlow();
       return;
     }
+
+    // ── ACH pre-approval flow: intercept confirm / hold replies ─────
+    if (this.handleAchApprovalResponse(commandMsg)) return;
 
     // ── Super Admin intents (role-gated) ────────────────────────────
     if (this.role === 'staff' && this.handleAdminIntent(commandMsg)) return;
@@ -1017,6 +1034,153 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     return text;
   }
 
+  // ── ACH Pre-Approval Warning Flow ───────────────────────────────────────
+
+  /**
+   * Intercepts "confirm" / "hold" replies while achApprovalPending is set.
+   * Returns true when the message was consumed by this flow.
+   */
+  private handleAchApprovalResponse(msg: string): boolean {
+    if (!this.achApprovalPending()) return false;
+    const lower = msg.toLowerCase().trim();
+    const pending = this.achApprovalPending()!;
+
+    if (/\b(confirm|yes|proceed|approve|go\s*ahead|execute|ok|sure|yep|yeah|do\s*it)\b/.test(lower)) {
+      this.achApprovalPending.set(null);
+      this.staffCtx.setAdminAction('approve_batch', pending.ref);
+      this.addAssistantMessage(
+        `**Approved.** ACH Batch **${pending.ref}** has been approved. Navigating to the **Admin Panel**.`
+      );
+      setTimeout(() => this.router.navigate(['/staff/admin-settings']), 800);
+      return true;
+    }
+
+    if (/\b(hold|pause|wait|stop|cancel|review|no|nope|abort)\b/.test(lower)) {
+      this.achApprovalPending.set(null);
+      this.addAssistantMessage(
+        `**Batch held.** **${pending.ref}** has not been approved.\n\n` +
+        `Navigating to the **Admin Panel** so you can review the flagged items before deciding.`
+      );
+      setTimeout(() => this.router.navigate(['/staff/admin-settings']), 800);
+      return true;
+    }
+
+    // Unrecognised reply — re-prompt
+    this.addAssistantMessage(
+      `I'm still waiting on your decision for **${pending.ref}**.\n\n` +
+      `Reply **confirm** to approve, or **hold** to pause and review.`
+    );
+    return true;
+  }
+
+  /**
+   * Fetches the batch preview (mock data for POC), runs the anomaly scan,
+   * and shows the conversational warning to the officer.
+   */
+  private startAchApprovalFlow(ref: string): void {
+    // If no ref given, show available pending batches and ask
+    if (!ref) {
+      const pendingList = [
+        'ACH-2026-001 — Metro Payroll Group ($142,350)',
+        'ACH-2026-002 — City Utilities Inc ($89,200)',
+        'ACH-2026-003 — TechServe Corp ($215,750)',
+        'ACH-2026-004 — Sunrise Vendors LLC ($52,100)',
+      ];
+      this.addAssistantMessage(
+        `Which ACH batch would you like to approve? Here are the pending batches:\n\n` +
+        pendingList.map(b => `- **${b}**`).join('\n') +
+        `\n\nSay the batch ID — e.g. _"Approve ACH-2026-001"_.`
+      );
+      return;
+    }
+
+    const preview = this.buildAchApprovalPreview(ref);
+
+    // Batch not found — show available pending batches
+    if (preview.entries === 0 && preview.warnings[0]?.includes('not found')) {
+      this.addAssistantMessage(
+        `I couldn't find a pending batch matching **${ref}**.\n\n` +
+        `Pending batches are:\n` +
+        `- **ACH-2026-001** — Metro Payroll Group\n` +
+        `- **ACH-2026-002** — City Utilities Inc\n` +
+        `- **ACH-2026-003** — TechServe Corp\n` +
+        `- **ACH-2026-004** — Sunrise Vendors LLC\n\n` +
+        `Did you mean one of these?`
+      );
+      return;
+    }
+
+    this.achApprovalPending.set(preview);
+
+    const header =
+      `I found **${preview.ref}** — ${preview.company}, ` +
+      `${preview.entries} payments, **${this.formatCurrency(preview.totalAmount)} total**.`;
+
+    if (preview.warnings.length === 0) {
+      this.addAssistantMessage(
+        `${header}\n\n` +
+        `No anomalies detected. This batch looks clean.\n\n` +
+        `Reply **confirm** to approve, or **hold** to review first.`
+      );
+      return;
+    }
+
+    const warningLines = preview.warnings.map(w => `⚠️ ${w}`).join('\n');
+    this.addAssistantMessage(
+      `${header}\n\n` +
+      `Before I approve, a couple of things to confirm:\n\n` +
+      `${warningLines}\n\n` +
+      `Reply **confirm** to approve the batch anyway, or **hold** to pause and review.`
+    );
+  }
+
+  /** Mock batch data for POC — mirrors super-admin-settings.component.ts entries */
+  private buildAchApprovalPreview(ref: string): AchBatchAnomalyPreview {
+    const catalogue: AchBatchAnomalyPreview[] = [
+      {
+        ref:         'ACH-2026-001',
+        company:     'Metro Payroll Group',
+        entries:     48,
+        totalAmount: 142350,
+        warnings: [
+          'Entry to **Regional Staffing Partners** is **$28,500** — about 9.6x the batch average of $2,966. Is this expected?',
+          'Effective date was **June 20, 2026**, which has already passed. Approving now may result in same-day or next-day settlement.',
+        ],
+      },
+      {
+        ref:         'ACH-2026-002',
+        company:     'City Utilities Inc',
+        entries:     31,
+        totalAmount: 89200,
+        warnings:    [],
+      },
+      {
+        ref:         'ACH-2026-003',
+        company:     'TechServe Corp',
+        entries:     67,
+        totalAmount: 215750,
+        warnings: [
+          'Entry to **Digital Infrastructure LLC** is **$47,800** — about 14.8x the batch average of $3,220. Is this expected?',
+          'This is the largest batch ever submitted by TechServe Corp. Previous maximum was **$180,000**.',
+        ],
+      },
+      {
+        ref:         'ACH-2026-004',
+        company:     'Sunrise Vendors LLC',
+        entries:     19,
+        totalAmount: 52100,
+        warnings: [
+          'Effective date was **June 23, 2026**, which has already passed.',
+          '**Falcon Enterprises** is a new payee appearing in this batch for the first time.',
+        ],
+      },
+    ];
+
+    const normalise = (s: string) => s.replace(/[-\s]/g, '').toLowerCase();
+    const match = catalogue.find(b => normalise(b.ref) === normalise(ref));
+    return match ?? { ref, company: 'Unknown', entries: 0, totalAmount: 0, warnings: ['Batch not found in pending queue.'] };
+  }
+
   // ── Staff Intent Detection ───────────────────────────────────────────────
 
   /**
@@ -1054,13 +1218,19 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (isBatchApprove || isBatchReject) {
       const refMatch = msg.match(/\b(ACH[-\s]?\d{4}[-\s]?\d{3,6})\b/i);
       const ref = refMatch ? refMatch[0].toUpperCase().replace(/\s/g, '-') : '';
-      const action = isBatchApprove ? 'approve_batch' : 'reject_batch' as const;
-      const verb   = isBatchApprove ? 'Approving' : 'Rejecting';
-      this.staffCtx.setAdminAction(action, ref);
-      this.addAssistantMessage(
-        `${verb} ACH batch${ref ? ` **${ref}**` : ''}. Navigating to the **Admin Panel** now.`
-      );
-      setTimeout(() => this.router.navigate(['/staff/admin-settings']), 800);
+
+      // Reject goes straight through — no pre-approval scan needed
+      if (isBatchReject) {
+        this.staffCtx.setAdminAction('reject_batch', ref);
+        this.addAssistantMessage(
+          `Rejecting ACH batch${ref ? ` **${ref}**` : ''}. Navigating to the **Admin Panel** now.`
+        );
+        setTimeout(() => this.router.navigate(['/staff/admin-settings']), 800);
+        return true;
+      }
+
+      // Approve — run pre-approval scan before executing
+      this.startAchApprovalFlow(ref);
       return true;
     }
 
