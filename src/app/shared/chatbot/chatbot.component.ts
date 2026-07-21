@@ -1049,19 +1049,16 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.achApprovalPending.set(null);
       this.staffCtx.setAdminAction('approve_batch', pending.ref);
       this.addAssistantMessage(
-        `**Approved.** ACH Batch **${pending.ref}** has been approved. Navigating to the **Admin Panel**.`
+        `**Approved.** ACH Batch **${pending.ref}** has been approved.`
       );
-      setTimeout(() => this.router.navigate(['/staff/admin-settings']), 800);
       return true;
     }
 
     if (/\b(hold|pause|wait|stop|cancel|review|no|nope|abort)\b/.test(lower)) {
       this.achApprovalPending.set(null);
       this.addAssistantMessage(
-        `**Batch held.** **${pending.ref}** has not been approved.\n\n` +
-        `Navigating to the **Admin Panel** so you can review the flagged items before deciding.`
+        `**Batch held.** **${pending.ref}** has not been approved. You can review the flagged items in the Admin Panel.`
       );
-      setTimeout(() => this.router.navigate(['/staff/admin-settings']), 800);
       return true;
     }
 
@@ -1112,6 +1109,9 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     this.achApprovalPending.set(preview);
 
+    // Navigate to Admin Panel immediately so the officer can see the batch
+    this.router.navigate(['/staff/admin-settings']);
+
     const header =
       `I found **${preview.ref}** — ${preview.company}, ` +
       `${preview.entries} payments, **${this.formatCurrency(preview.totalAmount)} total**.`;
@@ -1120,7 +1120,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.addAssistantMessage(
         `${header}\n\n` +
         `No anomalies detected. This batch looks clean.\n\n` +
-        `Reply **confirm** to approve, or **hold** to review first.`
+        `Reply **confirm** to approve, or **hold** to cancel.`
       );
       return;
     }
@@ -1130,7 +1130,7 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
       `${header}\n\n` +
       `Before I approve, a couple of things to confirm:\n\n` +
       `${warningLines}\n\n` +
-      `Reply **confirm** to approve the batch anyway, or **hold** to pause and review.`
+      `Reply **confirm** to approve the batch anyway, or **hold** to cancel.`
     );
   }
 
